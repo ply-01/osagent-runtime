@@ -2,8 +2,10 @@
 
 通用安装、演示与验证入口见 README.md。本快照含 Python 后端、C++ 桥接源码、
 服务接入、公开仿真样例、部署脚本和测试。它不是离线依赖安装器。
-原始来源声明 commit：6ca20ca8155ae148cf95d874e068cf287e00cadf；当前改造快照没有 Git 历史，
-该 commit 不代表新代码的版本。新的交付清单由 scripts/package-track1.py 生成。
+原始来源声明 commit：6ca20ca8155ae148cf95d874e068cf287e00cadf；原始快照未包含 Git 历史，
+该 commit 不代表新代码的版本。改造版从新仓库开始记录历史：
+https://github.com/ply-01/osagent-runtime （公开授权确认前为私有）。
+新的交付清单由 scripts/package-track1.py 生成。
 
 ## 可选 Open WebUI
 

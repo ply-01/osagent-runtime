@@ -52,7 +52,7 @@ def package(output: Path, root: Path = ROOT) -> Path:
         "schema_version": 1,
         "description": "OpenAtom 2026 track-one source snapshot; hashes cover exact archive file bytes",
         "baseline_source_commit": "6ca20ca8155ae148cf95d874e068cf287e00cadf",
-        "baseline_note": "Historical archive provenance only; this modified snapshot has no Git commit",
+        "baseline_note": "Original archive provenance only; modified release history is tracked separately in the project repository",
         "sha256": {name: hashlib.sha256(data).hexdigest() for name, data in files.items()},
     }
     encoded = (json.dumps(manifest, ensure_ascii=False, indent=2) + "\n").encode()

@@ -85,7 +85,8 @@ python scripts/package-track1.py --output dist
 ## 开源与来源
 
 自有代码按 [Apache-2.0](LICENSE) 提供；第三方组件遵守各自许可证。
-当前目录是源码快照，没有 Git 历史或公开仓库地址。
+原始目录是无 Git 历史的源码快照；改造后的版本已建立仓库：
+https://github.com/ply-01/osagent-runtime 。目前为私有仓库，确认原代码公开授权后再开放评审访问。
 正式报名名称为 OSAgent Runtime，Python 包和 CLI 沿用 os-agent-memory / os-agent，避免破坏兼容性。维护者须核实原始代码权属及
 第三方引入来源，建立公开仓库、填写团队信息并补充演示视频链接后再提交。
 项目不声明 Open WebUI、RRF、第三方模型或系统 SDK 为自主研发。
