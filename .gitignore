@@ -8,8 +8,8 @@ config/*.local.json
 .env
 .env.*
 !.env.example
-memory/
-data/
+/memory/
+/data/
 artifacts/
 dist/
 build/
