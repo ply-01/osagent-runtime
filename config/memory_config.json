@@ -1,0 +1,229 @@
+{
+  "_comment": "OS Agent memory tuning config. Change value fields to tune runtime behavior.",
+  "core": {
+    "default_confidence": {
+      "value": 0.55,
+      "desc": "Default confidence for new Core facts."
+    },
+    "default_importance": {
+      "value": 0.5,
+      "desc": "Default importance for new Core facts."
+    },
+    "confidence_boost": {
+      "value": 0.05,
+      "desc": "Confidence increment when the same fact appears again."
+    },
+    "search_top_k": {
+      "value": 3,
+      "desc": "Default Core search result limit."
+    },
+    "search_relative_cutoff": {
+      "value": 0.65,
+      "desc": "Drop Core hits scoring below this fraction of the top hit. 0 disables."
+    },
+    "semantic_min_similarity": {
+      "value": 0.6,
+      "desc": "Absolute cosine floor for semantic Core hits."
+    },
+    "semantic_relative_cutoff": {
+      "value": 0.99,
+      "desc": "Drop semantic hits below this fraction of the best similarity. 0 disables."
+    },
+    "recency_window_days": {
+      "value": 21.0,
+      "desc": "Core recency scoring window in days."
+    },
+    "recency_floor": {
+      "value": 0.2,
+      "desc": "Minimum recency factor for old Core facts."
+    },
+    "composite_keyword_weight": {
+      "value": 0.55,
+      "desc": "Core composite score weight for keyword hits."
+    },
+    "composite_confidence_weight": {
+      "value": 0.15,
+      "desc": "Core composite score weight for confidence."
+    },
+    "composite_importance_weight": {
+      "value": 0.2,
+      "desc": "Core composite score weight for importance."
+    },
+    "composite_recency_weight": {
+      "value": 0.1,
+      "desc": "Core composite score weight for recency."
+    }
+  },
+  "archival": {
+    "search_facts_top_k": {
+      "value": 6,
+      "desc": "Default archived fact search result limit."
+    },
+    "search_raw_events_top_k": {
+      "value": 8,
+      "desc": "Default raw event fallback search result limit."
+    },
+    "recency_window_days": {
+      "value": 60.0,
+      "desc": "Archival recency scoring window in days."
+    },
+    "recency_floor": {
+      "value": 0.05,
+      "desc": "Minimum recency factor for archived facts."
+    },
+    "composite_keyword_weight": {
+      "value": 0.75,
+      "desc": "Archival composite score weight for keyword hits."
+    },
+    "composite_recency_weight": {
+      "value": 0.25,
+      "desc": "Archival composite score weight for recency."
+    },
+    "raw_event_hot_max_events": {
+      "value": 10000,
+      "desc": "Maximum raw events kept in the hot JSONL window before gzip archival."
+    },
+    "raw_event_archive_enabled": {
+      "value": true,
+      "desc": "Move evicted raw events to a compressed cold archive."
+    },
+    "global_summary_max_chars": {
+      "value": 6000,
+      "desc": "Maximum extractive summary size across sessions."
+    },
+    "global_summary_max_sessions": {
+      "value": 64,
+      "desc": "Maximum sessions represented in the global summary."
+    }
+  },
+  "recall": {
+    "min_core_results": {
+      "value": 2,
+      "desc": "Fallback to Archival when Core hits are below this count."
+    },
+    "max_total": {
+      "value": 8,
+      "desc": "Maximum facts returned by Core + Archival + raw fallback."
+    },
+    "raw_event_default_confidence": {
+      "value": 0.25,
+      "desc": "Confidence assigned to raw-event fallback pseudo facts."
+    },
+    "raw_event_default_importance": {
+      "value": 0.15,
+      "desc": "Importance assigned to raw-event fallback pseudo facts."
+    },
+    "include_legacy_markdown_context": {
+      "value": false,
+      "desc": "Include legacy Markdown retrieval in AgentLoop context alongside Mem0 recall."
+    }
+  },
+  "pipeline": {
+    "session_dedup": {
+      "value": true,
+      "desc": "Within one session, keep only the latest fact for each entity+attribute before merging."
+    },
+    "confidence_threshold_legacy_write": {
+      "value": 0.5,
+      "desc": "Minimum confidence required before backfilling legacy Markdown memory."
+    },
+    "backfill_legacy_markdown": {
+      "value": true,
+      "desc": "Maintain Markdown as a readable mirror of active Core facts."
+    },
+    "skip_memory_file_facts": {
+      "value": true,
+      "desc": "Do not extract project facts from memory metadata files."
+    },
+    "per_file_attributes": {
+      "value": true,
+      "desc": "Use per-file attributes such as file_content:README.md to avoid cross-file overwrites."
+    },
+    "confidence_boost": {
+      "value": 0.05,
+      "desc": "Confidence increment when pipeline sees an unchanged fact."
+    },
+    "archive_raw_events": {
+      "value": true,
+      "desc": "Persist complete session events for deep recall fallback."
+    },
+    "behavior_enabled": {
+      "value": true,
+      "desc": "Aggregate repeated non-sensitive tool parameters into preferences."
+    },
+    "behavior_min_observations": {
+      "value": 3,
+      "desc": "Repeated observations required before inferring a behavior preference."
+    },
+    "session_preference_consolidation_enabled": {
+      "value": true,
+      "desc": "Keep one low-confidence implicit preference observation per session."
+    },
+    "session_preference_confidence": {
+      "value": 0.58,
+      "desc": "Confidence assigned to implicit session preference observations."
+    },
+    "session_preference_importance": {
+      "value": 0.55,
+      "desc": "Importance assigned to implicit session preference observations."
+    },
+    "preference_reinforcement_enabled": {
+      "value": true,
+      "desc": "Promote matching observations from independent sessions."
+    },
+    "preference_reinforcement_min_sessions": {
+      "value": 2,
+      "desc": "Independent sessions required before preference promotion."
+    },
+    "preference_reinforcement_similarity": {
+      "value": 0.6,
+      "desc": "Minimum lexical overlap for observation reinforcement."
+    },
+    "preference_reinforcement_confidence": {
+      "value": 0.72,
+      "desc": "Initial confidence for a reinforced preference."
+    },
+    "preference_reinforcement_importance": {
+      "value": 0.7,
+      "desc": "Importance for cross-session reinforced preferences."
+    },
+    "rule_importance": {
+      "read_file_success": { "value": 0.6, "desc": "Importance for successful text-file reads." },
+      "list_dir_success": { "value": 0.35, "desc": "Importance for successful directory listings." },
+      "shell_success": { "value": 0.3, "desc": "Importance for successful shell commands." },
+      "tool_failure": { "value": 0.55, "desc": "Importance for tool failures." },
+      "user_preference": { "value": 0.75, "desc": "Importance for user preference facts." },
+      "user_safety": { "value": 0.9, "desc": "Importance for user safety facts." },
+      "read_pdf_success": { "value": 0.65, "desc": "Importance for successful PDF reads." }
+    },
+    "rule_confidence": {
+      "read_file_success": { "value": 0.6, "desc": "Confidence for successful text-file reads." },
+      "list_dir_success": { "value": 0.45, "desc": "Confidence for successful directory listings." },
+      "shell_success": { "value": 0.5, "desc": "Confidence for successful shell commands." },
+      "tool_failure": { "value": 0.65, "desc": "Confidence for tool failures." },
+      "user_preference": { "value": 0.65, "desc": "Confidence for user preference facts." },
+      "user_safety": { "value": 0.7, "desc": "Confidence for user safety facts." },
+      "read_pdf_success": { "value": 0.65, "desc": "Confidence for successful PDF reads." }
+    }
+  },
+  "query_rewrite": {
+    "enabled": {
+      "value": true,
+      "desc": "Use conservative query planning before Mem0 recall."
+    }
+  },
+  "agentic_policy": {
+    "distillation_candidate_limit": {
+      "value": 24,
+      "desc": "Recall candidates collected before policy distillation."
+    },
+    "trace_enabled": {
+      "value": false,
+      "desc": "Append agentic memory action traces for later training."
+    },
+    "trace_file": {
+      "value": "policy-traces.jsonl",
+      "desc": "Trace file path relative to the memory root."
+    }
+  }
+}

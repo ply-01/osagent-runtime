@@ -1,0 +1,810 @@
+diff --git a/Dockerfile b/Dockerfile
+index 07b0e06..57ed624 100644
+--- a/Dockerfile
++++ b/Dockerfile
+@@ -24,7 +24,9 @@ ARG UID=0
+ ARG GID=0
+ 
+ ######## WebUI frontend ########
+-FROM --platform=$BUILDPLATFORM node:22-alpine3.20 AS build
++# The Kylin V11 Docker installation uses the legacy builder, which does not
++# define BUILDPLATFORM. Keep the build portable by using the host architecture.
++FROM node:22-alpine3.20 AS build
+ ARG BUILD_HASH
+ 
+ # Set Node.js options (heap limit Allocation failed - JavaScript heap out of memory)
+diff --git a/backend/open_webui/main.py b/backend/open_webui/main.py
+index 55613ac..9eac32e 100644
+--- a/backend/open_webui/main.py
++++ b/backend/open_webui/main.py
+@@ -571,6 +571,57 @@ async def initialize_runtime_config(app: FastAPI):
+     from open_webui.utils.access_control import migrate_access_control
+ 
+     connections = await Config.get('tool_server.connections', []) or []
++    osagent_public_webui_url = os.getenv('OS_AGENT_PUBLIC_WEBUI_URL', '').strip().rstrip('/')
++    if osagent_public_webui_url:
++        await Config.upsert({'webui.url': osagent_public_webui_url})
++
++    osagent_url = os.getenv('OS_AGENT_MEMORY_URL', '').strip().rstrip('/')
++    osagent_key = os.getenv('OS_AGENT_MEMORY_API_KEY', '').strip()
++    osagent_auto_register = os.getenv('OS_AGENT_MCP_AUTO_REGISTER', 'true').lower() in {
++        '1',
++        'true',
++        'yes',
++        'on',
++    }
++    if osagent_auto_register and osagent_url and osagent_key:
++        managed_connection = {
++            'url': f'{osagent_url}/mcp',
++            'path': '',
++            'type': 'mcp',
++            'auth_type': 'bearer',
++            'headers': None,
++            'key': osagent_key,
++            'config': {'enable': True, 'access_grants': []},
++            'info': {
++                'id': 'osagent',
++                'name': 'OSagent Tools',
++                'description': 'OSagent memory and workspace tools',
++            },
++        }
++        existing_index = next(
++            (
++                index
++                for index, connection in enumerate(connections)
++                if connection.get('type', 'openapi') == 'mcp'
++                and (connection.get('info') or {}).get('id') == 'osagent'
++            ),
++            None,
++        )
++        if existing_index is None:
++            connections.append(managed_connection)
++        else:
++            existing = connections[existing_index]
++            managed_connection['config'] = {
++                **(existing.get('config') or {}),
++                'enable': True,
++            }
++            managed_connection['info'] = {
++                **(existing.get('info') or {}),
++                **managed_connection['info'],
++            }
++            connections[existing_index] = managed_connection
++        await Config.upsert({'tool_server.connections': connections})
++
+     if any('access_control' in c.get('config', {}) for c in connections):
+         for connection in connections:
+             migrate_access_control(connection.get('config', {}))
+diff --git a/src/routes/(app)/workspace/+layout.svelte b/src/routes/(app)/workspace/+layout.svelte
+index 251b78d..ef3d34c 100644
+--- a/src/routes/(app)/workspace/+layout.svelte
++++ b/src/routes/(app)/workspace/+layout.svelte
+@@ -196,23 +196,6 @@
+ 							</a>
+ 						{/if}
+ 
+-						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.skills}
+-							<a
+-								draggable="false"
+-								aria-current={activeWorkspaceSection === 'skills' ? 'page' : null}
+-								class="min-w-fit px-1 text-sm inline-flex items-center gap-1 {activeWorkspaceSection ===
+-								'skills'
+-									? 'text-gray-900 dark:text-gray-100'
+-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+-								href="/workspace/skills"
+-							>
+-								<span>{$i18n.t('Skills')}</span>
+-								<span class="text-sm opacity-60">
+-									{formatCount($workspaceCounts.skills)}
+-								</span>
+-							</a>
+-						{/if}
+-
+ 						{#if $config?.features?.enable_plugins && ($user?.role === 'admin' || $user?.permissions?.workspace?.tools)}
+ 							<a
+ 								draggable="false"
+diff --git a/src/routes/(app)/workspace/plugins/+page.svelte b/src/routes/(app)/workspace/plugins/+page.svelte
+new file mode 100644
+index 0000000..a8bbf03
+--- /dev/null
++++ b/src/routes/(app)/workspace/plugins/+page.svelte
+@@ -0,0 +1,672 @@
++<script lang="ts">
++	import { onMount, getContext } from 'svelte';
++	import { goto } from '$app/navigation';
++	import { toast } from 'svelte-sonner';
++	import { getTools } from '$lib/apis/tools';
++	import {
++		getToolServerConnections,
++		initiateOAuthRedirect,
++		registerOAuthClient,
++		setToolServerConnections,
++		verifyToolServerConnection
++	} from '$lib/apis/configs';
++	import Search from '$lib/components/icons/Search.svelte';
++	import Refresh from '$lib/components/icons/Refresh.svelte';
++	import Settings from '$lib/components/icons/Settings.svelte';
++	import Plus from '$lib/components/icons/Plus.svelte';
++	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
++	import Trash from '$lib/components/icons/Trash.svelte';
++	import Spinner from '$lib/components/common/Spinner.svelte';
++
++	const i18n: any = getContext('i18n');
++	let loading = true;
++	let busy = '';
++	let query = '';
++	let selectedCategory = '全部';
++	let items: any[] = [];
++	let apiKey = '';
++	let needsKey = false;
++	let showSettings = false;
++	let toolConnections: any[] = [];
++	let availableTools: any[] = [];
++	let canManageConnections = true;
++	let integrationsReady = false;
++	let searchTimer: ReturnType<typeof setTimeout> | undefined;
++	let integrationRetryTimer: ReturnType<typeof setTimeout> | undefined;
++
++	$: installed = items.filter((item) => item.installed);
++	$: available = items.filter((item) => !item.installed);
++	$: categories = [
++		'全部',
++		...Array.from(new Set(items.map((item) => categoryFor(item)).filter(Boolean))).filter(
++			(category) => category !== '全部'
++		)
++	];
++	$: filtered = items.filter((item) => {
++		const needle = query.trim().toLowerCase();
++		const categoryMatches = selectedCategory === '全部' || categoryFor(item) === selectedCategory;
++		const searchable = [
++			item.name,
++			item.display_name,
++			item.description,
++			item.category,
++			item.author,
++			...(item.permissions ?? [])
++		];
++		const textMatches =
++			!needle ||
++			searchable.some((value) =>
++				String(value ?? '')
++					.toLowerCase()
++					.includes(needle)
++			);
++		return categoryMatches && textMatches;
++	});
++	$: filteredAvailable = filtered.filter((item) => !item.installed);
++	$: featured = filteredAvailable.filter((item) => item.featured).slice(0, 4);
++	$: featuredNames = new Set(featured.map((item) => item.name));
++	$: groupedAvailable = Array.from(
++		filteredAvailable.reduce((groups, item) => {
++			const category = categoryFor(item);
++			const group = groups.get(category) ?? [];
++			group.push(item);
++			groups.set(category, group);
++			return groups;
++		}, new Map<string, any[]>())
++	).map(([category, group]) => ({ category, items: group }));
++
++	function categoryFor(item: any): string {
++		return String(item.category || item.group || item.tags?.[0] || 'OSagent 插件');
++	}
++
++	function displayName(item: any): string {
++		return String(item.display_name || item.name || 'Plugin');
++	}
++
++	function iconTone(item: any): string {
++		const value = categoryFor(item).toLowerCase();
++		if (value.includes('文件') || value.includes('文档'))
++			return 'bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300';
++		if (value.includes('浏览') || value.includes('网页'))
++			return 'bg-cyan-100 text-cyan-700 dark:bg-cyan-950/60 dark:text-cyan-300';
++		if (value.includes('数据') || value.includes('表'))
++			return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300';
++		if (value.includes('自动') || value.includes('任务'))
++			return 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300';
++		return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200';
++	}
++
++	function connectorFor(item: any): any | null {
++		return item?.connectors?.[0] ?? null;
++	}
++
++	function connectionFor(item: any): any | null {
++		const connector = connectorFor(item);
++		if (!connector) return null;
++		return (
++			toolConnections.find(
++				(connection) => connection?.type === 'mcp' && connection?.info?.id === connector.id
++			) ?? null
++		);
++	}
++
++	function toolFor(item: any): any | null {
++		const connector = connectorFor(item);
++		if (!connector) return null;
++		return availableTools.find((tool) => tool.id === `server:mcp:${connector.id}`) ?? null;
++	}
++
++	function runtimeState(item: any): string {
++		if (!item.enabled) return 'disabled';
++		if (item.runtime_status === 'unsupported') return 'unsupported';
++		const connector = connectorFor(item);
++		if (!connector) return item.invocation_available ? 'ready' : 'unsupported';
++		if (!integrationsReady) return 'checking';
++		const connection = connectionFor(item);
++		if (!connection) return 'connection_required';
++		if (connection?.config?.enable === false) return 'disabled';
++		if (connector.auth_type === 'oauth_2.1' && toolFor(item)?.authenticated !== true) {
++			return 'authorization_required';
++		}
++		return 'ready';
++	}
++
++	function runtimeLabel(item: any): string {
++		const labels: Record<string, string> = {
++			checking: '检查连接',
++			ready: '可使用',
++			connection_required: '需要连接',
++			authorization_required: '需要授权',
++			disabled: '已禁用',
++			unsupported: '暂不兼容'
++		};
++		return labels[runtimeState(item)] ?? '状态未知';
++	}
++
++	function statusTone(item: any): string {
++		const state = runtimeState(item);
++		if (state === 'ready') return 'bg-emerald-500';
++		if (state === 'connection_required' || state === 'authorization_required')
++			return 'bg-amber-500';
++		if (state === 'unsupported') return 'bg-red-400';
++		return 'bg-gray-300 dark:bg-gray-600';
++	}
++
++	function lifecycleOperation(item: any): string {
++		return item.enabled ? 'disable' : 'enable';
++	}
++
++	function lifecycleLabel(item: any): string {
++		return busy === `${item.name}:${lifecycleOperation(item)}`
++			? '处理中'
++			: item.enabled
++				? '禁用'
++				: '启用';
++	}
++
++	const headers = () => {
++		const value = apiKey || localStorage.getItem('osagent-service-key') || '';
++		return value ? { Authorization: `Bearer ${value}` } : {};
++	};
++
++	async function request(path: string, options: RequestInit = {}) {
++		const response = await fetch(`/osagent${path}`, {
++			...options,
++			headers: { ...headers(), ...(options.headers || {}) }
++		});
++		const payload = await response.json().catch(() => ({ ok: false, error: response.statusText }));
++		if (response.status === 401) {
++			needsKey = true;
++			showSettings = true;
++			throw new Error('OSagent 服务需要 API 密钥');
++		}
++		if (!response.ok || !payload.ok) throw new Error(payload.error || `HTTP ${response.status}`);
++		return payload.data;
++	}
++
++	async function load() {
++		loading = true;
++		try {
++			const data = await request(`/v1/plugins?query=${encodeURIComponent(query)}`);
++			items = data?.plugins ?? [];
++			needsKey = false;
++		} catch (error) {
++			if (!needsKey) toast.error(String(error));
++		} finally {
++			loading = false;
++		}
++	}
++
++	async function loadIntegrations() {
++		integrationsReady = false;
++		try {
++			const config = await getToolServerConnections(localStorage.token);
++			toolConnections = config?.TOOL_SERVER_CONNECTIONS ?? [];
++			canManageConnections = true;
++			integrationsReady = true;
++		} catch {
++			toolConnections = [];
++			canManageConnections = false;
++		}
++		try {
++			availableTools = (await getTools(localStorage.token)) ?? [];
++		} catch {
++			availableTools = [];
++		}
++	}
++
++	async function refreshAll() {
++		await Promise.all([load(), loadIntegrations()]);
++	}
++
++	function onQueryInput() {
++		if (searchTimer) clearTimeout(searchTimer);
++		searchTimer = setTimeout(load, 250);
++	}
++
++	async function run(item: any, operation: string) {
++		busy = `${item.name}:${operation}`;
++		try {
++			const path =
++				operation === 'install'
++					? `/v1/plugins/${encodeURIComponent(item.name)}/install`
++					: operation === 'uninstall'
++						? `/v1/plugins/${encodeURIComponent(item.name)}`
++						: `/v1/plugins/${encodeURIComponent(item.name)}/${operation}`;
++			await request(path, { method: operation === 'uninstall' ? 'DELETE' : 'POST', body: '{}' });
++			const connectorIds = (item.connectors ?? []).map((connector: any) => connector.id);
++			if (connectorIds.length && canManageConnections) {
++				if (operation === 'uninstall') {
++					toolConnections = toolConnections.filter(
++						(connection) => !connectorIds.includes(connection?.info?.id)
++					);
++				} else if (operation === 'enable' || operation === 'disable') {
++					toolConnections = toolConnections.map((connection) =>
++						connectorIds.includes(connection?.info?.id)
++							? {
++									...connection,
++									config: { ...(connection.config ?? {}), enable: operation === 'enable' }
++								}
++							: connection
++					);
++				}
++				await setToolServerConnections(localStorage.token, {
++					TOOL_SERVER_CONNECTIONS: toolConnections
++				});
++			}
++			await refreshAll();
++			const labels: Record<string, string> = {
++				install: '已安装',
++				enable: '已启用',
++				disable: '已禁用',
++				uninstall: '已卸载'
++			};
++			toast.success(`${item.name} ${labels[operation] || operation}`);
++		} catch (error) {
++			toast.error(String(error));
++		} finally {
++			busy = '';
++		}
++	}
++
++	function toolId(item: any): string {
++		const connector = connectorFor(item);
++		return connector ? `server:mcp:${connector.id}` : '';
++	}
++
++	async function usePlugin(item: any) {
++		const connector = connectorFor(item);
++		if (!connector) {
++			toast.info('该插件提供声明式能力，Agent 会在需要时加载它的说明。');
++			return;
++		}
++		const state = runtimeState(item);
++		if (state === 'ready') {
++			await goto(`/?tools=${encodeURIComponent(toolId(item))}`);
++			return;
++		}
++		if (!canManageConnections) {
++			toast.error('连接 MCP 插件需要 Open WebUI 管理员权限');
++			return;
++		}
++
++		busy = `${item.name}:connect`;
++		try {
++			let connection = connectionFor(item);
++			if (!connection) {
++				let oauthClientInfo: string | null = null;
++				const draft = {
++					url: connector.url,
++					path: '',
++					type: 'mcp',
++					auth_type: connector.auth_type ?? 'none',
++					headers: null,
++					key: null,
++					config: { enable: true, access_grants: [] },
++					info: {
++						id: connector.id,
++						name: displayName(item),
++						description: item.description ?? '',
++						oauth_resource_parameter: 'auto',
++						...(connector.oauth_scope ? { oauth_scope: connector.oauth_scope } : {})
++					}
++				};
++
++				await verifyToolServerConnection(localStorage.token, draft);
++				if (connector.auth_type === 'oauth_2.1') {
++					const registration = await registerOAuthClient(
++						localStorage.token,
++						{
++							url: connector.url,
++							client_id: connector.id,
++							client_name: `OSagent ${displayName(item)}`,
++							...(connector.oauth_scope ? { oauth_scope: connector.oauth_scope } : {})
++						},
++						'mcp'
++					);
++					oauthClientInfo = registration?.oauth_client_info ?? null;
++					if (!oauthClientInfo) throw new Error('OAuth 客户端注册失败');
++				}
++
++				connection = {
++					...draft,
++					info: {
++						...draft.info,
++						...(oauthClientInfo ? { oauth_client_info: oauthClientInfo } : {})
++					}
++				};
++				toolConnections = [
++					...toolConnections.filter((value) => value?.info?.id !== connector.id),
++					connection
++				];
++				await setToolServerConnections(localStorage.token, {
++					TOOL_SERVER_CONNECTIONS: toolConnections
++				});
++			}
++
++			await loadIntegrations();
++			if (connector.auth_type === 'oauth_2.1' && toolFor(item)?.authenticated !== true) {
++				toast.success('连接已保存，正在打开账户授权');
++				initiateOAuthRedirect({
++					id: toolId(item),
++					serverId: connector.id,
++					authType: 'mcp'
++				});
++				return;
++			}
++			toast.success(`${displayName(item)} 已连接`);
++			await goto(`/?tools=${encodeURIComponent(toolId(item))}`);
++		} catch (error) {
++			toast.error(`插件连接失败：${String(error)}`);
++		} finally {
++			busy = '';
++		}
++	}
++
++	function useLabel(item: any): string {
++		if (busy === `${item.name}:connect`) return '连接中';
++		const state = runtimeState(item);
++		if (state === 'checking') return '检查中';
++		if (state === 'ready') return '在对话中使用';
++		if (state === 'authorization_required') return '继续授权';
++		if (state === 'connection_required') return '连接';
++		if (item.invocation_available) return '使用说明';
++		return '不可用';
++	}
++
++	async function uninstall(item: any) {
++		if (window.confirm(`确定卸载 ${item.name} 吗？`)) await run(item, 'uninstall');
++	}
++
++	function saveKey() {
++		localStorage.setItem('osagent-service-key', apiKey);
++		needsKey = false;
++		showSettings = false;
++		refreshAll();
++	}
++
++	onMount(() => {
++		void refreshAll();
++		// The workspace route can mount before Open WebUI restores the user token.
++		// Re-read host connections once after hydration to avoid duplicate OAuth registration.
++		integrationRetryTimer = setTimeout(() => void loadIntegrations(), 1000);
++		return () => {
++			if (integrationRetryTimer) clearTimeout(integrationRetryTimer);
++		};
++	});
++</script>
++
++<svelte:head>
++	<title>插件市场 / {$i18n.t('Workspace')}</title>
++</svelte:head>
++
++<div class="mx-auto w-full max-w-6xl px-2 pb-16 pt-4 md:px-8 md:pt-6">
++	<div
++		class="flex flex-wrap items-center justify-end gap-3 border-b border-gray-100 pb-3 dark:border-gray-800"
++	>
++		<div class="flex items-center gap-1.5">
++			<button
++				class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-50 dark:hover:bg-gray-800"
++				title="刷新"
++				aria-label="刷新"
++				disabled={loading}
++				on:click={refreshAll}
++			>
++				<Refresh class="size-4 {loading ? 'animate-spin' : ''}" />
++			</button>
++			<button
++				class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-800"
++				title="插件市场设置"
++				aria-label="插件市场设置"
++				on:click={() => (showSettings = !showSettings)}
++			>
++				<Settings class="size-4" />
++			</button>
++			<details class="relative">
++				<summary
++					class="flex cursor-pointer list-none items-center gap-1 rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-gray-700 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
++					><Plus class="size-4" /> 添加 <ChevronDown class="size-3.5" /></summary
++				>
++				<div
++					class="absolute right-0 z-20 mt-2 w-48 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 shadow-xl dark:border-gray-700 dark:bg-gray-900"
++				>
++					<a
++						class="block px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
++						href="/workspace/tools">管理 Open WebUI 工具</a
++					>
++				</div>
++			</details>
++		</div>
++	</div>
++
++	<header class="mx-auto max-w-4xl pb-2 pt-10 text-center md:pt-14">
++		<h1 class="text-3xl font-semibold tracking-tight text-gray-900 dark:text-gray-100 md:text-4xl">
++			插件
++		</h1>
++		<p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
++			在 OSagent 中安装并管理可复用的工作能力
++		</p>
++		<div class="relative mt-7">
++			<Search
++				class="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-gray-400"
++			/>
++			<input
++				class="w-full rounded-2xl border border-gray-200 bg-transparent py-3 pl-11 pr-4 text-sm outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-200 dark:border-gray-700 dark:focus:border-gray-500 dark:focus:ring-gray-800"
++				placeholder="搜索插件、能力或权限"
++				aria-label="搜索插件"
++				bind:value={query}
++				on:input={onQueryInput}
++			/>
++		</div>
++	</header>
++
++	{#if showSettings}
++		<section
++			class="mx-auto mt-5 flex max-w-4xl flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm dark:border-gray-800 dark:bg-gray-900/60"
++			aria-label="OSagent settings"
++		>
++			<div class="flex-1">
++				<div class="font-medium text-gray-900 dark:text-gray-100">OSagent 服务连接</div>
++				<div class="mt-0.5 text-xs text-gray-500">API 密钥仅保存在当前浏览器的本地存储中</div>
++			</div>
++			<input
++				class="min-w-[220px] flex-1 rounded-lg border border-gray-300 bg-transparent px-3 py-2 outline-none focus:border-gray-500 dark:border-gray-700"
++				type="password"
++				placeholder="输入服务 API 密钥"
++				bind:value={apiKey}
++				on:keydown={(event) => event.key === 'Enter' && saveKey()}
++			/>
++			<button
++				class="rounded-lg bg-gray-900 px-3 py-2 text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900"
++				on:click={saveKey}>保存并连接</button
++			>
++		</section>
++	{/if}
++
++	{#if needsKey && !showSettings}
++		<div
++			class="mx-auto mt-5 max-w-4xl rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-200"
++		>
++			OSagent 服务需要 API 密钥，请打开右上角设置完成连接。
++		</div>
++	{/if}
++
++	{#if loading}
++		<div class="flex justify-center py-24"><Spinner className="size-5" /></div>
++	{:else}
++		<div class="mx-auto mt-10 max-w-5xl">
++			<div
++				class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-3 dark:border-gray-800"
++			>
++				<div class="flex items-center gap-1 overflow-x-auto">
++					{#each categories as category}
++						<button
++							class="shrink-0 rounded-lg px-3 py-1.5 text-sm transition {selectedCategory ===
++							category
++								? 'bg-gray-100 font-medium text-gray-900 dark:bg-gray-800 dark:text-gray-100'
++								: 'text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-900'}"
++							on:click={() => (selectedCategory = category)}>{category}</button
++						>
++					{/each}
++				</div>
++				<span class="text-xs text-gray-400"
++					>{installed.length} 已安装 · {available.length} 可用</span
++				>
++			</div>
++
++			<section class="mt-8">
++				<div class="mb-4 flex items-center justify-between">
++					<h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">已安装</h2>
++					<a
++						class="text-xs text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
++						href="/workspace/tools">查看工具</a
++					>
++				</div>
++				{#if installed.length}
++					<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
++						{#each filtered.filter((item) => item.installed) as item}
++							<div class="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
++								<div class="flex items-start gap-3">
++									<div
++										class="flex size-10 shrink-0 items-center justify-center rounded-xl text-sm font-semibold {iconTone(
++											item
++										)}"
++									>
++										{displayName(item).slice(0, 1).toUpperCase()}
++									</div>
++									<div class="min-w-0 flex-1">
++										<div class="truncate font-medium text-gray-900 dark:text-gray-100">
++											{displayName(item)}
++										</div>
++										<div class="mt-0.5 text-xs text-gray-500">
++											{categoryFor(item)} · v{item.version}
++										</div>
++									</div>
++									<div class="mt-0.5 flex shrink-0 items-center gap-1.5 text-xs text-gray-500">
++										<span class="size-2 rounded-full {statusTone(item)}"></span>
++										{runtimeLabel(item)}
++									</div>
++								</div>
++								<div class="mt-3 line-clamp-2 min-h-10 text-sm text-gray-500">
++									{item.description || 'OSagent 可复用扩展'}
++								</div>
++								{#if item.runtime?.unsupported?.length && runtimeState(item) === 'unsupported'}
++									<div class="mt-2 line-clamp-2 text-xs text-red-500">
++										{item.runtime.unsupported[0]}
++									</div>
++								{:else if connectorFor(item)}
++									<div class="mt-2 truncate text-xs text-gray-400">
++										MCP · {connectorFor(item).auth_type === 'oauth_2.1' ? 'OAuth 2.1' : '无需授权'}
++									</div>
++								{:else if item.invocation_available}
++									<div class="mt-2 text-xs text-gray-400">声明式 Agent 能力</div>
++								{/if}
++								<div class="mt-4 flex items-center gap-2">
++									<button
++										class="flex-1 rounded-lg bg-gray-900 px-2.5 py-1.5 text-xs font-medium text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
++										disabled={!!busy ||
++											!item.enabled ||
++											runtimeState(item) === 'checking' ||
++											(runtimeState(item) === 'unsupported' && !item.invocation_available)}
++										on:click={() => usePlugin(item)}>{useLabel(item)}</button
++									>
++									<button
++										class="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs transition hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
++										disabled={!!busy}
++										on:click={() => run(item, lifecycleOperation(item))}
++										>{lifecycleLabel(item)}</button
++									><button
++										class="rounded-lg p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-950/30"
++										disabled={!!busy}
++										title="卸载插件"
++										aria-label={`卸载 ${item.name}`}
++										on:click={() => uninstall(item)}><Trash class="size-4" /></button
++									>
++								</div>
++							</div>
++						{/each}
++					</div>
++				{:else}<p
++						class="rounded-xl border border-dashed border-gray-200 py-8 text-center text-sm text-gray-500 dark:border-gray-800"
++					>
++						{query || selectedCategory !== '全部'
++							? '没有匹配的已安装插件'
++							: '暂无已安装插件，去精选区域添加能力'}
++					</p>{/if}
++			</section>
++
++			{#if featured.length}
++				<section class="mt-12">
++					<h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">精选</h2>
++					<div class="grid gap-x-10 md:grid-cols-2">
++						{#each featured as item}<div
++								class="flex min-w-0 items-center gap-3 border-b border-gray-100 py-4 dark:border-gray-900"
++							>
++								<div
++									class="flex size-11 shrink-0 items-center justify-center rounded-xl text-lg font-semibold {iconTone(
++										item
++									)}"
++								>
++									{displayName(item).slice(0, 1).toUpperCase()}
++								</div>
++								<div class="min-w-0 flex-1">
++									<div class="truncate font-medium text-gray-900 dark:text-gray-100">
++										{displayName(item)}
++									</div>
++									<div class="truncate text-sm text-gray-500">
++										{item.description || 'OSagent 可复用扩展'}
++									</div>
++								</div>
++								<button
++									class="shrink-0 rounded-lg border border-gray-200 px-3 py-1.5 text-sm transition hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
++									disabled={!!busy}
++									on:click={() => run(item, 'install')}
++									>{busy === `${item.name}:install` ? '安装中' : '安装'}</button
++								>
++							</div>{/each}
++					</div>
++				</section>
++			{/if}
++
++			{#each groupedAvailable.filter( (group) => group.items.some((item) => !featuredNames.has(item.name)) ) as group}
++				<section class="mt-12">
++					<h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">
++						{group.category}
++					</h2>
++					<div class="grid gap-x-10 md:grid-cols-2">
++						{#each group.items.filter((item) => !featuredNames.has(item.name)) as item}<div
++								class="flex min-w-0 items-center gap-3 border-b border-gray-100 py-4 dark:border-gray-900"
++							>
++								<div
++									class="flex size-11 shrink-0 items-center justify-center rounded-xl text-lg font-semibold {iconTone(
++										item
++									)}"
++								>
++									{displayName(item).slice(0, 1).toUpperCase()}
++								</div>
++								<div class="min-w-0 flex-1">
++									<div class="truncate font-medium text-gray-900 dark:text-gray-100">
++										{displayName(item)}
++									</div>
++									<div class="truncate text-sm text-gray-500">
++										{item.description || 'OSagent 可复用扩展'}
++									</div>
++								</div>
++								<button
++									class="shrink-0 rounded-lg border border-gray-200 px-3 py-1.5 text-sm transition hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
++									disabled={!!busy}
++									on:click={() => run(item, 'install')}
++									>{busy === `${item.name}:install` ? '安装中' : '安装'}</button
++								>
++							</div>{/each}
++					</div>
++				</section>
++			{/each}
++			{#if !filteredAvailable.length}<p class="mt-10 text-center text-sm text-gray-500">
++					{items.length
++						? '没有符合当前筛选条件的可用插件'
++						: '插件目录为空，请在 OSagent 服务中配置 catalog.json'}
++				</p>{/if}
++		</div>
++	{/if}
++</div>
+diff --git a/vite.config.ts b/vite.config.ts
+index df802c0..2284ddd 100644
+--- a/vite.config.ts
++++ b/vite.config.ts
+@@ -4,6 +4,22 @@ import { defineConfig } from 'vite';
+ import { viteStaticCopy } from 'vite-plugin-static-copy';
+ 
+ export default defineConfig({
++	server: {
++		proxy: {
++			'/osagent': {
++				target: process.env.OSAGENT_PROXY_TARGET || 'http://127.0.0.1:33001',
++				changeOrigin: false
++			}
++		}
++	},
++	preview: {
++		proxy: {
++			'/osagent': {
++				target: process.env.OSAGENT_PROXY_TARGET || 'http://127.0.0.1:33001',
++				changeOrigin: false
++			}
++		}
++	},
+ 	plugins: [
+ 		sveltekit(),
+ 		viteStaticCopy({

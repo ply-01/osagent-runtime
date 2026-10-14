@@ -1,0 +1,15 @@
+{
+  "schema_version": 1, "sources": [],
+  "jobs": [{
+    "id": "candidate", "system": "OSagent Windows rules candidate", "dataset": "KylinMemoryEval-v1 v5 split",
+    "dataset_revision": "ce40257f57463a9222912032de97e4f2df8b0f2b7a792fe2d2ccafeaaf357256",
+    "evaluation_role": "authorized 20 development / 480 unviewed reuse", "metric_scope": "conflicts",
+    "output": "doc/evaluation/results/authorized-conflict-candidate-20260910.json",
+    "command": ["{python}", "{root}/benchmarks/authorized_conflict_development.py", "--dataset-root", "{root}/data/benchmarks/kylin-memory-eval-v5", "--output", "{output}"],
+    "env": {"OS_AGENT_MEMORY_EXTRACTOR": "rules", "OS_AGENT_EVAL_WORKERS": "1"},
+    "metrics": [{"id": "isolated", "label": "Unviewed remainder accuracy", "path": "isolated.natural_ingress_accuracy", "unit": "percent"}]
+  }],
+  "forbidden_publish_paths": [".local-evaluation"], "forbidden_tracked_paths": ["data/benchmarks", ".local-evaluation"],
+  "manifest_output": "doc/evaluation/results/authorized-conflict-candidate-pipeline-20260910.json",
+  "report_output": "doc/evaluation/2026-09-10-authorized-conflict-candidate-pipeline.md"
+}

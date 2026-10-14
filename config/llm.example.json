@@ -1,0 +1,14 @@
+{
+  "api_key": "sk-your-api-key-here",
+  "base_url": "https://api.deepseek.com",
+  "model": "deepseek-v4-flash",
+  "embedding_backend": "openai",
+  "embedding_model": "text-embedding-3-small",
+  "embedding_base_url": "https://api.openai.com/v1",
+  "timeout_seconds": 60,
+  "embedding_timeout_seconds": 60,
+  "temperature": 0.0,
+  "context_max_chars": 12000,
+  "replan_context_max_chars": 8000,
+  "response_context_max_chars": 6000
+}

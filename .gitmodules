@@ -1,0 +1,16 @@
+[submodule "vendor/open-webui"]
+	path = vendor/open-webui
+	url = https://github.com/open-webui/open-webui.git
+	branch = v0.11.0
+
+[submodule "ref/upstream/memory-agent"]
+	path = ref/upstream/memory-agent
+	url = https://github.com/langchain-ai/memory-agent.git
+
+[submodule "ref/upstream/memory-template"]
+	path = ref/upstream/memory-template
+	url = https://github.com/langchain-ai/memory-template.git
+
+[submodule "ref/upstream/pi"]
+	path = ref/upstream/pi
+	url = https://github.com/earendil-works/pi.git

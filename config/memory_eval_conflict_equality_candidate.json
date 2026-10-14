@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "sources": [],
+  "jobs": [{
+    "id": "quality", "system": "OSagent Windows rules candidate", "dataset": "KylinMemoryEval-v1 v5",
+    "dataset_revision": "ce40257f57463a9222912032de97e4f2df8b0f2b7a792fe2d2ccafeaaf357256",
+    "evaluation_role": "frozen reuse", "metric_scope": "500 preferences and 500 conflicts",
+    "output": "doc/evaluation/results/conflict-equality-candidate-20260910.json",
+    "command": ["{python}", "{root}/benchmarks/conflict_quality_aggregate.py", "--dataset-root", "{root}/data/benchmarks/kylin-memory-eval-v5", "--output", "{output}"],
+    "env": {"OS_AGENT_MEMORY_EXTRACTOR": "rules", "OS_AGENT_EVAL_WORKERS": "1"},
+    "metrics": [{"id": "natural", "label": "Natural conflict accuracy", "path": "conflict_handling.natural_ingress_accuracy", "unit": "percent"}]
+  }],
+  "forbidden_publish_paths": [], "forbidden_tracked_paths": ["data/benchmarks"],
+  "manifest_output": "doc/evaluation/results/conflict-equality-candidate-pipeline-20260910.json",
+  "report_output": "doc/evaluation/2026-09-10-conflict-equality-candidate-pipeline.md"
+}

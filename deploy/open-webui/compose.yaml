@@ -1,0 +1,82 @@
+name: osagent-webui
+
+services:
+  osagent-memory:
+    build:
+      context: ../..
+      dockerfile: deploy/open-webui/Dockerfile.osagent
+    image: osagent-memory-web:0.1.0
+    restart: unless-stopped
+    command:
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8765"
+      - --workspace
+      - /workspace
+      - --memory-root
+      - /data/memory
+      - --allow-memory-mutations
+      - --allow-workspace-mutations
+    environment:
+      OS_AGENT_MEMORY_API_KEY: ${OS_AGENT_MEMORY_API_KEY:?set OS_AGENT_MEMORY_API_KEY in .env}
+      OS_AGENT_BASE_URL: ${OS_AGENT_BASE_URL:?set OS_AGENT_BASE_URL in .env}
+      OS_AGENT_API_KEY: ${OS_AGENT_API_KEY:?set OS_AGENT_API_KEY in .env}
+      OS_AGENT_MODEL: ${OS_AGENT_MODEL:?set OS_AGENT_MODEL in .env}
+      OS_AGENT_EMBEDDING_BACKEND: ${OS_AGENT_EMBEDDING_BACKEND:-openai}
+      OS_AGENT_EMBEDDING_BASE_URL: ${OS_AGENT_EMBEDDING_BASE_URL:-http://host.docker.internal:11434/v1}
+      OS_AGENT_EMBEDDING_API_KEY: ${OS_AGENT_EMBEDDING_API_KEY:-local}
+      OS_AGENT_EMBEDDING_MODEL: ${OS_AGENT_EMBEDDING_MODEL:-}
+    volumes:
+      - osagent-memory-data:/data/memory
+      - type: bind
+        source: ${OS_AGENT_WORKSPACE:-../..}
+        target: /workspace
+    ports:
+      - 127.0.0.1:${OS_AGENT_MEMORY_PORT:-8765}:8765
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/health', timeout=3)
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  open-webui:
+    image: ${OPEN_WEBUI_IMAGE:-ghcr.io/open-webui/open-webui:v0.11.0-slim}
+    restart: unless-stopped
+    depends_on:
+      osagent-memory:
+        condition: service_healthy
+    environment:
+      WEBUI_AUTH: ${WEBUI_AUTH:-False}
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:?set WEBUI_SECRET_KEY in .env}
+      OPENAI_API_BASE_URL: ${OPENAI_API_BASE_URL:-http://host.docker.internal:11434/v1}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-local}
+      # OSagent is the authoritative memory backend. Keep Open WebUI's
+      # independent memory and notes stores disabled to avoid duplicate writes.
+      ENABLE_MEMORIES: "False"
+      ENABLE_MEMORY_SYSTEM_CONTEXT: "False"
+      ENABLE_MEMORY_BACKGROUND_REVIEW: "False"
+      ENABLE_NOTES: "False"
+      OS_AGENT_MEMORY_URL: http://osagent-memory:8765
+      OS_AGENT_MEMORY_API_KEY: ${OS_AGENT_MEMORY_API_KEY:?set OS_AGENT_MEMORY_API_KEY in .env}
+      OS_AGENT_MCP_AUTO_REGISTER: "True"
+    volumes:
+      - open-webui-data:/app/backend/data
+      - ../../integrations/open_webui:/opt/osagent-integrations:ro
+    ports:
+      - ${WEBUI_BIND_ADDRESS:-0.0.0.0}:${WEBUI_PORT:-3000}:8080
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+volumes:
+  open-webui-data:
+    name: ${OPEN_WEBUI_DATA_VOLUME:-osagent-open-webui-data}
+  osagent-memory-data:
+    name: ${OS_AGENT_MEMORY_DATA_VOLUME:-osagent-memory-data}

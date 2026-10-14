@@ -1,0 +1,397 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "locomo",
+      "type": "git",
+      "url": "https://github.com/snap-research/locomo.git",
+      "revision": "3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376",
+      "path": "data/benchmark-sources/locomo"
+    },
+    {
+      "id": "mem0-runtime",
+      "type": "python_venv",
+      "path": "data/comparison-runtimes/mem0-2.0.14",
+      "requirements": [
+        "mem0ai==2.0.14",
+        "sentence-transformers==5.2.2"
+      ]
+    },
+    {
+      "id": "mem2act",
+      "type": "git",
+      "url": "https://github.com/Cantaloupe-M/Mem2ActBench.git",
+      "revision": "b00726940b5abbe9bd324bdd7a2cb272f5c62a29",
+      "path": "data/benchmark-sources/Mem2ActBench"
+    },
+    {
+      "id": "oh-my-pi-source",
+      "type": "git",
+      "url": "https://github.com/can1357/oh-my-pi.git",
+      "revision": "de6b7974a0658e1fae8fac584368a33021ae668f",
+      "path": "data/benchmark-sources/oh-my-pi"
+    },
+    {
+      "id": "bun-runtime",
+      "type": "npm_runtime",
+      "path": "data/comparison-runtimes/oh-my-pi",
+      "packages": ["bun@1.3.14"]
+    },
+    {
+      "id": "oh-my-pi-mnemopi-runtime",
+      "type": "npm_runtime",
+      "path": "data/comparison-runtimes/oh-my-pi-mnemopi-17.3.4-fts",
+      "packages": ["@oh-my-pi/pi-mnemopi@17.3.4"]
+    }
+  ],
+  "jobs": [
+    {
+      "id": "os-agent-competition",
+      "enabled": true,
+      "system": "OS Agent explicit memory",
+      "dataset": "OS Agent competition diagnostic v1",
+      "dataset_revision": "repository fixture @ current commit",
+      "evaluation_role": "competition development regression",
+      "metric_scope": "the four competition hard metrics",
+      "command": [
+        "{python}",
+        "benchmarks/competition_memory_eval.py",
+        "--output",
+        "{output}"
+      ],
+      "output": "doc/evaluation/results/pipeline/os-agent-competition.json",
+      "timeout_seconds": 300,
+      "metrics": [
+        {
+          "id": "preference_accuracy",
+          "label": "偏好提取准确率",
+          "path": "preference_extraction.accuracy",
+          "unit": "percent",
+          "threshold": {"min": 0.85},
+          "competition_metric": true
+        },
+        {
+          "id": "recall_at_5",
+          "label": "知识检索 Recall@5",
+          "path": "knowledge_retrieval.current_agent_memory.recall_at_5",
+          "unit": "percent",
+          "threshold": {"min": 0.85},
+          "competition_metric": true
+        },
+        {
+          "id": "recall_p95_ms",
+          "label": "10k 知识检索 p95",
+          "path": "latency_by_active_fact_count.10000.latency_ms.p95",
+          "unit": "ms",
+          "threshold": {"max": 500.0},
+          "competition_metric": true
+        },
+        {
+          "id": "conflict_accuracy",
+          "label": "知识冲突处理正确率",
+          "path": "conflict_handling.natural_pipeline_balanced_accuracy",
+          "unit": "percent",
+          "threshold": {"min": 0.88},
+          "competition_metric": true
+        }
+      ]
+    },
+    {
+      "id": "os-agent-locomo-retrieval",
+      "enabled": true,
+      "system": "OS Agent explicit memory",
+      "dataset": "LoCoMo QA evidence retrieval",
+      "dataset_revision": "3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376",
+      "evaluation_role": "external retrieval generalization",
+      "metric_scope": "evidence Recall@K and retrieval latency; not a competition hard-metric score",
+      "sources": ["locomo"],
+      "command": [
+        "{python}",
+        "benchmarks/locomo_retrieval_eval.py",
+        "--dataset-path",
+        "data/benchmark-sources/locomo/data/locomo10.json",
+        "--limit",
+        "100",
+        "--seed",
+        "20260726",
+        "--top-k",
+        "5",
+        "--output",
+        "{output}"
+      ],
+      "env": {
+        "OS_AGENT_EMBEDDING_CONFIG": "{root}/config/embedding.local.json"
+      },
+      "output": "doc/evaluation/results/pipeline/os-agent-locomo-retrieval.json",
+      "timeout_seconds": 1800,
+      "metrics": [
+        {
+          "id": "evidence_recall_at_1",
+          "label": "证据 Recall@1",
+          "path": "summary.recall_at_1",
+          "unit": "percent"
+        },
+        {
+          "id": "evidence_recall_at_5",
+          "label": "证据 Recall@5",
+          "path": "summary.recall_at_5",
+          "unit": "percent"
+        },
+        {
+          "id": "recall_p95_ms",
+          "label": "检索 p95",
+          "path": "summary.recall_latency_ms.p95",
+          "unit": "ms"
+        }
+      ]
+    },
+    {
+      "id": "os-agent-perma-retrieval",
+      "enabled": true,
+      "system": "OS Agent explicit memory",
+      "dataset": "ustclsc/PERMA Type 3",
+      "dataset_revision": "440e64e4fb8baec6f7ad10c1de135505f93e7cb1",
+      "evaluation_role": "external development regression; fixed consumed slice",
+      "metric_scope": "gold-option support diagnostics and recall latency; not official Recall@5",
+      "command": [
+        "{python}",
+        "benchmarks/perma_memory_eval.py",
+        "--max-tasks",
+        "20",
+        "--sample-offset",
+        "0",
+        "--top-k",
+        "5",
+        "--output",
+        "{output}"
+      ],
+      "env": {
+        "OS_AGENT_EMBEDDING_CONFIG": "{root}/config/embedding.local.json"
+      },
+      "output": "doc/evaluation/results/pipeline/os-agent-perma-retrieval.json",
+      "timeout_seconds": 1800,
+      "metrics": [
+        {
+          "id": "gold_support_at_5",
+          "label": "Gold-option support@5",
+          "path": "summary.gold_option_lexical_support_at_5",
+          "unit": "percent"
+        },
+        {
+          "id": "recall_p95_ms",
+          "label": "检索 p95",
+          "path": "summary.recall_latency_ms.p95",
+          "unit": "ms"
+        },
+        {
+          "id": "preference_session_coverage",
+          "label": "偏好 session coverage",
+          "path": "extraction.preference_session_coverage",
+          "unit": "percent"
+        }
+      ]
+    },
+    {
+      "id": "mem0-locomo-retrieval",
+      "enabled": true,
+      "system": "Mem0 OSS 2.0.14",
+      "dataset": "LoCoMo QA evidence retrieval",
+      "dataset_revision": "3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376",
+      "evaluation_role": "external explicit-memory comparison",
+      "metric_scope": "evidence Recall@K and retrieval latency; not a competition hard-metric score",
+      "sources": ["locomo", "mem0-runtime"],
+      "command": [
+        "{mem0_python}",
+        "benchmarks/mem0_locomo_retrieval_eval.py",
+        "--dataset-path",
+        "data/benchmark-sources/locomo/data/locomo10.json",
+        "--limit",
+        "100",
+        "--seed",
+        "20260726",
+        "--top-k",
+        "5",
+        "--output",
+        "{output}"
+      ],
+      "env": {
+        "MEM0_TELEMETRY": "false",
+        "HF_HUB_DISABLE_TELEMETRY": "1"
+      },
+      "output": "doc/evaluation/results/pipeline/mem0-locomo-retrieval.json",
+      "timeout_seconds": 1800,
+      "metrics": [
+        {
+          "id": "evidence_recall_at_1",
+          "label": "证据 Recall@1",
+          "path": "summary.recall_at_1",
+          "unit": "percent"
+        },
+        {
+          "id": "evidence_recall_at_5",
+          "label": "证据 Recall@5",
+          "path": "summary.recall_at_5",
+          "unit": "percent"
+        },
+        {
+          "id": "recall_p95_ms",
+          "label": "检索 p95",
+          "path": "summary.recall_latency_ms.p95",
+          "unit": "ms"
+        }
+      ]
+    },
+    {
+      "id": "oh-my-pi-locomo-retrieval",
+      "enabled": true,
+      "system": "Oh My Pi 17.3.4 / Mnemopi FTS",
+      "dataset": "LoCoMo QA evidence retrieval",
+      "dataset_revision": "3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376",
+      "evaluation_role": "external agent-memory comparison",
+      "metric_scope": "Mnemopi evidence Recall@K and latency; not full-agent task completion",
+      "sources": ["locomo", "oh-my-pi-source", "bun-runtime", "oh-my-pi-mnemopi-runtime"],
+      "command": [
+        "{python}",
+        "benchmarks/oh_my_pi_locomo_retrieval_eval.py",
+        "--dataset-path",
+        "data/benchmark-sources/locomo/data/locomo10.json",
+        "--limit",
+        "100",
+        "--seed",
+        "20260726",
+        "--top-k",
+        "5",
+        "--bun",
+        "{bun}",
+        "--runtime-root",
+        "{oh_my_pi_runtime}",
+        "--source-root",
+        "data/benchmark-sources/oh-my-pi",
+        "--retrieval-mode",
+        "fts",
+        "--output",
+        "{output}"
+      ],
+      "output": "doc/evaluation/results/pipeline/oh-my-pi-locomo-retrieval.json",
+      "timeout_seconds": 1800,
+      "metrics": [
+        {
+          "id": "evidence_recall_at_1",
+          "label": "证据 Recall@1",
+          "path": "summary.recall_at_1",
+          "unit": "percent"
+        },
+        {
+          "id": "evidence_recall_at_5",
+          "label": "证据 Recall@5",
+          "path": "summary.recall_at_5",
+          "unit": "percent"
+        },
+        {
+          "id": "recall_p95_ms",
+          "label": "检索 p95",
+          "path": "summary.recall_latency_ms.p95",
+          "unit": "ms"
+        }
+      ]
+    },
+    {
+      "id": "native-subagent-e2e",
+      "enabled": false,
+      "system": "OS Agent main + native memory subagent",
+      "dataset": "randomized cross-session smoke protocol",
+      "dataset_revision": "repository script @ current commit",
+      "evaluation_role": "live LLM and real subagent process verification",
+      "metric_scope": "tool routing, write, restart persistence, recall answer",
+      "command": [
+        "{python}",
+        "benchmarks/native_subagent_e2e_eval.py",
+        "--output",
+        "{output}"
+      ],
+      "output": "doc/evaluation/results/pipeline/native-subagent-e2e.json",
+      "timeout_seconds": 300,
+      "metrics": [
+        {
+          "id": "e2e_passed",
+          "label": "Native subagent E2E",
+          "path": "passed",
+          "unit": "boolean"
+        },
+        {
+          "id": "write_routed",
+          "label": "LLM routed durable write",
+          "path": "checks.write_routed_to_subagent",
+          "unit": "boolean"
+        },
+        {
+          "id": "read_routed",
+          "label": "LLM routed cross-session recall",
+          "path": "checks.read_routed_to_subagent",
+          "unit": "boolean"
+        },
+        {
+          "id": "restart_persistence",
+          "label": "Memory survived process restart",
+          "path": "checks.persisted_after_restart",
+          "unit": "boolean"
+        }
+      ]
+    },
+    {
+      "id": "mem2act-subagent-routing",
+      "enabled": false,
+      "system": "OS Agent LLM planner + routing-only subagent",
+      "dataset": "Mem2ActBench tool-memory fixed slice",
+      "dataset_revision": "b00726940b5abbe9bd324bdd7a2cb272f5c62a29",
+      "evaluation_role": "live LLM routing diagnostic",
+      "metric_scope": "subagent tool selection only; no memory-accuracy claim",
+      "sources": ["mem2act"],
+      "command": [
+        "{python}",
+        "benchmarks/mem2act_subagent_routing_eval.py",
+        "--limit",
+        "20",
+        "--output",
+        "{output}"
+      ],
+      "output": "doc/evaluation/results/pipeline/mem2act-subagent-routing.json",
+      "timeout_seconds": 900,
+      "metrics": [
+        {
+          "id": "selection_rate",
+          "label": "Subagent selection rate",
+          "path": "summary.subagent_selection_rate",
+          "unit": "percent"
+        },
+        {
+          "id": "successful_call_rate",
+          "label": "Subagent successful call rate",
+          "path": "summary.subagent_successful_call_rate",
+          "unit": "percent"
+        },
+        {
+          "id": "error_rate",
+          "label": "Routing error rate",
+          "path": "summary.error_rate",
+          "unit": "percent"
+        }
+      ]
+    }
+  ],
+  "manifest_output": "doc/evaluation/results/pipeline/manifest.json",
+  "report_output": "doc/evaluation/explicit-memory-pipeline-report.md",
+  "forbidden_tracked_paths": [
+    "data/benchmark-sources",
+    "data/comparison-runtimes"
+  ],
+  "forbidden_publish_paths": [
+    "benchmarks/pi_perma_memory_eval.py",
+    "benchmarks/pi_session_context.mjs",
+    "data/pi-benchmark-runtime",
+    "data/pi-benchmark-smoke.json",
+    "doc/evaluation/2026-07-26-pi-agent-competition-metrics-comparison.md",
+    "doc/evaluation/results/perma-pi-agent-offset400-mcq20.json",
+    "ref/upstream/pi"
+  ]
+}

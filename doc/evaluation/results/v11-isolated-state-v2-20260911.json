@@ -1,0 +1,94 @@
+{
+  "platform": "Linux-6.6.0-63-generic-x86_64-with-glibc2.38",
+  "role": "V11 frozen snapshot, unviewed reused split, automated annotations",
+  "manifest_sha256": "ce40257f57463a9222912032de97e4f2df8b0f2b7a792fe2d2ccafeaaf357256",
+  "annotation_sha256": "684dc60a1cd2cfd97a50c1f6f667364d82467554c9e0fa216964b884e74cc137",
+  "total_executed": 480,
+  "labels_loaded_after_prediction": true,
+  "legacy": {
+    "cases": 480,
+    "structured_update_accuracy": 1.0,
+    "natural_ingress_accuracy": 0.2083,
+    "by_category": {
+      "duplicate": {
+        "cases": 95,
+        "structured_update_accuracy": 1.0,
+        "natural_ingress_accuracy": 0.0
+      },
+      "independent": {
+        "cases": 92,
+        "structured_update_accuracy": 1.0,
+        "natural_ingress_accuracy": 0.0
+      },
+      "latest_override": {
+        "cases": 98,
+        "structured_update_accuracy": 1.0,
+        "natural_ingress_accuracy": 0.0
+      },
+      "revert": {
+        "cases": 100,
+        "structured_update_accuracy": 1.0,
+        "natural_ingress_accuracy": 1.0
+      },
+      "scoped": {
+        "cases": 95,
+        "structured_update_accuracy": 1.0,
+        "natural_ingress_accuracy": 0.0
+      }
+    }
+  },
+  "state_v2_reviewed_subset": {
+    "protocol": "natural-conflict-state-v2-draft1",
+    "annotated_cases": 480,
+    "correct": 221,
+    "accuracy": 0.46041666666666664,
+    "invalid_predictions": 0,
+    "missing_predictions": 0,
+    "history_evaluated": false
+  },
+  "review_coverage": 1.0,
+  "pending_review": 0,
+  "full_split_accuracy": 0.46041666666666664,
+  "full_split_possible_range": [
+    0.46041666666666664,
+    0.46041666666666664
+  ],
+  "annotation_model": "deepseek-v4-flash",
+  "review_counts": {
+    "accepted": 480
+  },
+  "elapsed_seconds": 6.770216157001414,
+  "source_sha256": {
+    "src/os_agent/memory/__init__.py": "107377ac210fccef081afed7f317477d4e35fe349683921afe29e7e58603590b",
+    "src/os_agent/memory/agentic_policy.py": "9dd44e66295f0266ad0cc0a0363a7c12274b2ca2e89f052b2f62e71ed6f3275d",
+    "src/os_agent/memory/behavior_aggregator.py": "194060a4996944ebcbb822bd9870294b41c3a5e208a6dc4ca96f222fadbf7b61",
+    "src/os_agent/memory/embedding_cache.py": "adacd4bd4218aae64fe67c2eab6139c43db34bc4753d774fdd9a3e9ba9e8a53d",
+    "src/os_agent/memory/embedding_provider.py": "fa1aa85f07902ac612ef961355a0fda8845e11f6cf1bef1c08f464235f41b61c",
+    "src/os_agent/memory/fact_vector_index.py": "cdb8c13dccac66e50647bb8db43929dea2723bb68b76dc510127ee9e12d5bbab",
+    "src/os_agent/memory/hard_delete.py": "d6e4eadd3eebe0bd05e0aab9314dae2ed655011f9e93a10ccb36823983fb3326",
+    "src/os_agent/memory/hook.py": "bce17b850de4cea8c19d9ceea396b7fa6bdff3822928408ca579bd222bf94ef1",
+    "src/os_agent/memory/interface.py": "94d0706ea6480a5bdcff9a9c07e95107585a65782ac4937de04ac6820636dcc3",
+    "src/os_agent/memory/kylin_vector_engine.py": "67d50a172325feb5efb70a1a265bf98ce9c3e430ce1fa62d2a6894b6ff7c3b64",
+    "src/os_agent/memory/maintenance.py": "28a8e3b924776db3d365fdd513f9ea7512c4325e188e17d1c017350ee14c7569",
+    "src/os_agent/memory/markdown_store.py": "4cde06b83a0db6b1292b69277373f96edaf7bd8ca95804e87a7f2542525a94bb",
+    "src/os_agent/memory/mem0_archival.py": "248d71cb3d65aa41f13b4c09526449cd04970f5516cbcdf071c5fe36a050f9da",
+    "src/os_agent/memory/mem0_core.py": "bd4011053cab3f56b0060c06a73e055f1507e4269402bd01bd510d2458f261c3",
+    "src/os_agent/memory/mem0_pipeline.py": "98d29214f4c544690d7d9a8af2491e55cc2c87885051f7dcabc231c45a269f8c",
+    "src/os_agent/memory/mem0_recall.py": "10526dff7432aca77bb55c4839800c02e71829dba8cdb0aaf0fb0f6e2b407101",
+    "src/os_agent/memory/mem0_schemas.py": "84e5cb8d7546b7dd10b44af31fc17edd2ad40df58468955950a3ead8ee111b32",
+    "src/os_agent/memory/memory_config.py": "6cc6f29a1fc9287a4fa752b36e163c7279907b389b30ddaa17c6ef329829abee",
+    "src/os_agent/memory/memory_frame.py": "80b71310bf00066d60e5e2c84af1885199ea140b780ed62e3a566adf600f3692",
+    "src/os_agent/memory/module.py": "e60da5c2486ebe0c6632529a9abc1db148e45ce9933e9951f525fcb05d416abb",
+    "src/os_agent/memory/policy.py": "cbe800695daabbd3d9fd6f401252917f56e517d3081ca2b5bf4d2e768bce8a5f",
+    "src/os_agent/memory/preference_extractor.py": "4a9b2d3dda592ba1e4ef51f7470ec7c6798f50883f3f9fb1ea404dbd88428b4b",
+    "src/os_agent/memory/query_rewriter.py": "32306e61598e81942bd543e5f8f4a3bdf7c8f5959491ef6e082f452deb1a4508",
+    "src/os_agent/memory/retrieval_text.py": "489d602206ff58fbf3f7067ec0a269758b3b1e62a75a92264ee189ecf805c1be",
+    "src/os_agent/memory/schemas.py": "aa7b1b907e8331db5fad75568dd1128874f8bb32b5496fc386ab09ad5fdf594d",
+    "src/os_agent/memory/semantic_alignment.py": "a3a7101e5fbfe0aafdeb4deda2035fc21dbe0e5ebe8c874ede283d622406e034",
+    "src/os_agent/memory/semantic_extractor.py": "a286bf8e1e89c4d3feb8fa9bf4c2bf34548e70e1336b3951067d8347464618d5",
+    "src/os_agent/memory/session_vector_index.py": "e3752fde15418d9b34caa7717f9fe2e6f90579eb30f4a16b84a7ce95239cbfd4",
+    "src/os_agent/memory/short_term.py": "f9cca63181c38d925208e8d37a566b122672c712ac148f63ddbc1bce6fea3e60",
+    "src/os_agent/memory/state_assembler.py": "81053bc6b6e006142f511085bbf4ce5989a42d1b6327819d7c83e13988dd64e8",
+    "src/os_agent/memory/vector_index.py": "6088c7c7e9532ba1001bcdbe38acad1eed957803abf14e65a576b163d7fdc5c7"
+  }
+}

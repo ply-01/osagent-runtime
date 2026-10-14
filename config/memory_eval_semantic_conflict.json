@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "sources": [],
+  "jobs": [
+    {
+      "id": "rules", "system": "OSagent Windows rules", "dataset": "KylinMemoryEval-v1 v5",
+      "dataset_revision": "ce40257f57463a9222912032de97e4f2df8b0f2b7a792fe2d2ccafeaaf357256",
+      "evaluation_role": "frozen reuse configuration comparison", "metric_scope": "500 conflicts, original scorer",
+      "output": "doc/evaluation/results/semantic-conflict-rules-20260910.json",
+      "command": ["{python}", "{root}/benchmarks/conflict_transition_eval.py", "--dataset-root", "{root}/data/benchmarks/kylin-memory-eval-v5", "--output", "{output}"],
+      "env": {"OS_AGENT_MEMORY_EXTRACTOR": "rules", "OS_AGENT_EVAL_WORKERS": "4"},
+      "metrics": [{"id": "natural", "label": "Natural conflict accuracy", "path": "conflict_handling.natural_ingress_accuracy", "unit": "percent"}]
+    },
+    {
+      "id": "semantic", "system": "OSagent Windows semantic_state", "dataset": "KylinMemoryEval-v1 v5",
+      "dataset_revision": "ce40257f57463a9222912032de97e4f2df8b0f2b7a792fe2d2ccafeaaf357256",
+      "evaluation_role": "frozen reuse configuration comparison", "metric_scope": "500 conflicts, original scorer",
+      "output": "doc/evaluation/results/semantic-conflict-candidate-20260910.json",
+      "timeout_seconds": 10800,
+      "command": ["{python}", "{root}/benchmarks/conflict_transition_eval.py", "--dataset-root", "{root}/data/benchmarks/kylin-memory-eval-v5", "--output", "{output}"],
+      "env": {"OS_AGENT_MEMORY_EXTRACTOR": "semantic_state", "OS_AGENT_EVAL_WORKERS": "4", "OS_AGENT_MODEL": "deepseek-v4-flash", "OS_AGENT_TIMEOUT_SECONDS": "30", "OS_AGENT_LLM_MAX_RETRIES": "1"},
+      "metrics": [{"id": "natural", "label": "Natural conflict accuracy", "path": "conflict_handling.natural_ingress_accuracy", "unit": "percent"}]
+    }
+  ],
+  "forbidden_publish_paths": [],
+  "forbidden_tracked_paths": ["data/benchmarks"],
+  "manifest_output": "doc/evaluation/results/semantic-conflict-pipeline-20260910.json",
+  "report_output": "doc/evaluation/2026-09-10-semantic-conflict-pipeline.md"
+}

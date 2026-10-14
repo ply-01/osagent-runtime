@@ -1,0 +1,2 @@
+"""Structured event logging."""
+

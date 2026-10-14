@@ -1,0 +1,182 @@
+{
+  "schema_version": 1,
+  "name": "制造运维交接：设备维护知识的跨会话更新与追溯",
+  "steps": [
+    {
+      "title": "早班登记设备维护流程",
+      "action": "remember",
+      "arguments": {
+        "content": "产线 A 空压机维护采用流程 SOP-A1",
+        "entity": "factory-a/compressor-01",
+        "attribute": "maintenance_sop",
+        "value": "SOP-A1",
+        "evidence": "模拟早班维护登记单 A-001",
+        "source_session_id": "shift-morning",
+        "metadata": {
+          "scope": "factory-a"
+        }
+      }
+    },
+    {
+      "title": "登记另一工厂的独立设备",
+      "action": "remember",
+      "arguments": {
+        "content": "产线 B 空压机维护采用流程 SOP-B1",
+        "entity": "factory-b/compressor-01",
+        "attribute": "maintenance_sop",
+        "value": "SOP-B1",
+        "evidence": "模拟工厂 B 登记单 B-001",
+        "metadata": {
+          "scope": "factory-b"
+        }
+      }
+    },
+    {
+      "title": "关闭并重新打开记忆存储",
+      "action": "restart"
+    },
+    {
+      "title": "晚班检索持久化流程",
+      "action": "recall",
+      "arguments": {
+        "query": "maintenance_sop",
+        "scope": "ltm",
+        "entity": "factory-a/compressor-01",
+        "attribute": "maintenance_sop",
+        "fact_scope": "factory-a"
+      },
+      "checks": [
+        {
+          "kind": "contains_value",
+          "value": "SOP-A1"
+        },
+        {
+          "kind": "excludes_value",
+          "value": "SOP-B1"
+        }
+      ]
+    },
+    {
+      "title": "更新经审核的新维护流程",
+      "action": "remember",
+      "arguments": {
+        "content": "产线 A 空压机维护流程更新为 SOP-A2",
+        "entity": "factory-a/compressor-01",
+        "attribute": "maintenance_sop",
+        "value": "SOP-A2",
+        "evidence": "模拟工程审核单 A-002",
+        "source_session_id": "shift-evening",
+        "metadata": {
+          "scope": "factory-a"
+        }
+      }
+    },
+    {
+      "title": "验证当前生效版本",
+      "action": "recall",
+      "arguments": {
+        "query": "maintenance_sop",
+        "scope": "ltm",
+        "entity": "factory-a/compressor-01",
+        "attribute": "maintenance_sop",
+        "fact_scope": "factory-a"
+      },
+      "checks": [
+        {
+          "kind": "contains_value",
+          "value": "SOP-A2"
+        }
+      ]
+    },
+    {
+      "title": "审计被替代版本",
+      "action": "history",
+      "arguments": {
+        "entity": "factory-a/compressor-01::factory-a",
+        "attribute": "maintenance_sop"
+      },
+      "checks": [
+        {
+          "kind": "contains_value",
+          "value": "SOP-A1"
+        }
+      ]
+    },
+    {
+      "title": "验证工厂 B 的流程未受影响",
+      "action": "recall",
+      "arguments": {
+        "query": "maintenance_sop",
+        "scope": "ltm",
+        "entity": "factory-b/compressor-01",
+        "attribute": "maintenance_sop",
+        "fact_scope": "factory-b"
+      },
+      "checks": [
+        {
+          "kind": "contains_value",
+          "value": "SOP-B1"
+        },
+        {
+          "kind": "excludes_value",
+          "value": "SOP-A2"
+        }
+      ]
+    },
+    {
+      "title": "注销设备并物理删除维护事实及旧版本",
+      "action": "forget",
+      "arguments": {
+        "entity": "factory-a/compressor-01::factory-a",
+        "attribute": "maintenance_sop",
+        "hard": true
+      },
+      "checks": [
+        {
+          "kind": "core_missing",
+          "entity": "factory-a/compressor-01::factory-a",
+          "attribute": "maintenance_sop"
+        }
+      ]
+    },
+    {
+      "title": "重启后验证注销设备无召回",
+      "action": "restart"
+    },
+    {
+      "title": "验证删除后的查询",
+      "action": "recall",
+      "arguments": {
+        "query": "maintenance_sop",
+        "scope": "ltm",
+        "entity": "factory-a/compressor-01",
+        "attribute": "maintenance_sop"
+      },
+      "checks": [
+        {
+          "kind": "excludes_value",
+          "value": "SOP-A1"
+        },
+        {
+          "kind": "excludes_value",
+          "value": "SOP-A2"
+        }
+      ],
+      "expected_ok": false
+    },
+    {
+      "title": "验证旧版本已物理清理",
+      "action": "history",
+      "arguments": {
+        "entity": "factory-a/compressor-01::factory-a",
+        "attribute": "maintenance_sop"
+      },
+      "checks": [
+        {
+          "kind": "excludes_value",
+          "value": "SOP-A1"
+        }
+      ]
+    }
+  ]
+}

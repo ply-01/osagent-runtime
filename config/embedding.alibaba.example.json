@@ -1,0 +1,6 @@
+{
+  "embedding_backend": "openai",
+  "embedding_api_key": "sk-your-dashscope-api-key",
+  "embedding_base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "embedding_model": "text-embedding-v3"
+}

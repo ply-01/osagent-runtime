@@ -1,0 +1,9 @@
+{
+ "schema_version":1,"sources":[],
+ "jobs":[{"id":"v11","system":"OSagent V11 rules frozen snapshot","dataset":"v5 unviewed 480 split","dataset_revision":"ce40257f57463a9222912032de97e4f2df8b0f2b7a792fe2d2ccafeaaf357256","evaluation_role":"automated annotation; not human gold","metric_scope":"natural conflict state",
+ "output":"doc/evaluation/results/v11-isolated-state-v2-20260911.json",
+ "command":["powershell","-NoProfile","-File","{root}/scripts/run-v11-isolated-state.ps1"],
+ "metrics":[{"id":"state","label":"Reviewed subset state accuracy","path":"state_v2_reviewed_subset.accuracy","unit":"percent"}]}],
+ "forbidden_publish_paths":[".local-evaluation"],"forbidden_tracked_paths":["data/benchmarks",".local-evaluation"],
+ "manifest_output":"doc/evaluation/results/v11-isolated-state-v2-pipeline-20260911.json","report_output":"doc/evaluation/2026-09-11-v11-isolated-state-pipeline.md"
+}

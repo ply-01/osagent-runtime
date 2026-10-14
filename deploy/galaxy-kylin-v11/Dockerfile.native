@@ -1,0 +1,8 @@
+# Offline overlay for Galaxy Kylin V11.
+# The guest already caches the upstream slim image. Copy the verified static
+# build plus the pinned backend entrypoint that restores the managed OSagent
+# MCP connection. The guest does not need a Node registry or npm.
+FROM ghcr.io/open-webui/open-webui:v0.11.0-slim
+
+COPY build /app/build
+COPY backend/open_webui/main.py /app/backend/open_webui/main.py

@@ -1,0 +1,45 @@
+[project]
+name = "os-agent-memory"
+version = "0.1.0"
+description = "Auditable long-term memory infrastructure for industry agents."
+requires-python = ">=3.11"
+license = "Apache-2.0"
+readme = "README.md"
+dependencies = [
+    "mcp>=2.0,<3",
+    "pdfplumber>=0.11",
+    "starlette>=0.40,<2",
+    "uvicorn>=0.30,<1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10", "httpx>=0.27,<1"]
+local-embeddings = [
+    "huggingface-hub>=0.30",
+    "numpy>=1.26",
+    "onnxruntime>=1.18,<2",
+    "tokenizers>=0.19",
+]
+local-embeddings-torch = [
+    "torch>=2.2",
+    "transformers>=4.40,<6",
+]
+computer-use = [
+    "playwright>=1.50,<2",
+]
+
+[project.scripts]
+os-agent = "os_agent.cli:main"
+os-agent-mcp = "os_agent.mcp_server:main"
+os-agent-web = "os_agent.web_service:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/os_agent"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

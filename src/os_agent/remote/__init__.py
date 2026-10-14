@@ -1,0 +1,53 @@
+"""Trust-boundary primitives for commercial remote command delivery."""
+
+from os_agent.remote.admission import (
+    AdmissionOutcome,
+    AdmissionResult,
+    CommandAdmissionError,
+    CommandIdConflictError,
+    CommandNotFoundError,
+    CommandRecord,
+    InvalidStatusTransitionError,
+    NonceReplayError,
+    SQLiteCommandAdmissionStore,
+    allowed_transitions,
+)
+from os_agent.remote.protocol import (
+    CommandBinding,
+    CommandEnvelope,
+    CommandExpiredError,
+    CommandKind,
+    CommandPayload,
+    CommandPrincipal,
+    CommandProtocolError,
+    CommandStatus,
+    IdentityBindingError,
+    PayloadDigestMismatchError,
+    TimeValidationError,
+    compute_payload_digest,
+)
+
+__all__ = [
+    "AdmissionOutcome",
+    "AdmissionResult",
+    "CommandAdmissionError",
+    "CommandBinding",
+    "CommandEnvelope",
+    "CommandExpiredError",
+    "CommandIdConflictError",
+    "CommandKind",
+    "CommandNotFoundError",
+    "CommandPayload",
+    "CommandPrincipal",
+    "CommandProtocolError",
+    "CommandRecord",
+    "CommandStatus",
+    "IdentityBindingError",
+    "InvalidStatusTransitionError",
+    "NonceReplayError",
+    "PayloadDigestMismatchError",
+    "SQLiteCommandAdmissionStore",
+    "TimeValidationError",
+    "allowed_transitions",
+    "compute_payload_digest",
+]

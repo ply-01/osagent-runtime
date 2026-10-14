@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "sources": [],
+  "jobs": [
+    {
+      "id": "baseline", "system": "OSagent V11 baseline", "dataset": "KylinMemoryEval-v1 v5",
+      "dataset_revision": "ce40257f57463a9222912032de97e4f2df8b0f2b7a792fe2d2ccafeaaf357256",
+      "evaluation_role": "frozen reuse", "metric_scope": "conflicts only",
+      "output": "doc/evaluation/results/conflict-transition-baseline-20260910.json",
+      "command": ["powershell", "-NoProfile", "-File", "{root}/scripts/run-v11-conflict-transition.ps1", "-Stage", "osagent-v11-eval-20260909", "-OutputPath", "{output}"],
+      "metrics": [{"id": "natural", "label": "Natural conflict accuracy", "path": "conflict_handling.natural_ingress_accuracy", "unit": "percent"}]
+    },
+    {
+      "id": "candidate", "system": "OSagent V11 candidate", "dataset": "KylinMemoryEval-v1 v5",
+      "dataset_revision": "ce40257f57463a9222912032de97e4f2df8b0f2b7a792fe2d2ccafeaaf357256",
+      "evaluation_role": "frozen reuse", "metric_scope": "conflicts only",
+      "output": "doc/evaluation/results/conflict-transition-candidate-20260910.json",
+      "command": ["powershell", "-NoProfile", "-File", "{root}/scripts/run-v11-conflict-transition.ps1", "-Stage", "osagent-v11-conflict-transition-20260910", "-OutputPath", "{output}"],
+      "metrics": [{"id": "natural", "label": "Natural conflict accuracy", "path": "conflict_handling.natural_ingress_accuracy", "unit": "percent"}]
+    }
+  ],
+  "forbidden_publish_paths": [],
+  "forbidden_tracked_paths": ["data/benchmarks"],
+  "manifest_output": "doc/evaluation/results/conflict-transition-pipeline-20260910.json",
+  "report_output": "doc/evaluation/2026-09-10-conflict-transition-pipeline.md"
+}
