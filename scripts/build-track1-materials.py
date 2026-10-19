@@ -109,7 +109,7 @@ def build_pdf(output, info, report, tests):
     table([['操作','实际输出或检查'],['登记与跨实例持久化','工厂 A 的维护流程为 SOP-A1；重开存储后仍可召回'],['更新当前流程','工厂 A 新流程 SOP-A2 生效'],['查询被替代版本','历史中保留 SOP-A1 与原始登记证据'],['区分另一设备','工厂 B 仍召回 SOP-B1，不返回工厂 A 新流程'],['设备注销与物理遗忘','删除工厂 A 当前事实和旧版本；重开存储后无召回'],['全流程检查',f'{report["checks_passed"]}/{report["checks_total"]}；每次使用独立 run-* 状态目录']],[132,W-228])
     section('软件验证结果')
     paragraph(f'当前 macOS arm64 / Python 3.13.13：{passed} 项测试通过，{skipped} 项跳过，另有 30 个子测试通过。跳过项仅涉及未交付的可选 Open WebUI 源码/覆盖层检查，不代表前端验证通过。')
-    paragraph('已验证源码包解压后在新虚拟环境安装、测试与运行场景。CLI、MCP 与 HTTP 的帮助入口可执行；具体核心服务行为由回归测试覆盖。跨平台 CI 配置已提供，尚未在 Windows/Linux 实机或远程 CI 运行。')
+    paragraph('已验证源码包解压后在新虚拟环境安装、测试与运行场景。CLI、MCP 与 HTTP 的帮助入口可执行；具体核心服务行为由回归测试覆盖。GitHub Actions 已在 macOS、Linux、Windows × Python 3.11/3.13 六组环境完成安装、完整回归、场景重放和打包，全部通过。')
     paragraph('报告耗时只是本机小样例单次操作时间，不作为吞吐能力、10k 检索性能或生产 SLA。原始历史评测不与本次结果混算。',small)
     finish()
     # 6

@@ -1,21 +1,32 @@
 # 本次交付验证记录
 
-日期：2026-10-19。运行平台：macOS arm64，Python 3.13.13。
+日期：2026-10-19。目标平台：macOS、Linux、Windows。
 
 ## 实际运行结果
 
-- 完整 pytest：327 passed，3 skipped，另有 30 个 subtests passed。
-- 3 个跳过项是未包含 Open WebUI 上游/定制源码的前端检查，不代表前端验证通过。
-- 公开制造运维场景：10/10 检查通过；输入为合成结构化数据，后端为真实记忆实现。
-- 从源码 ZIP 解压到临时目录、创建新虚拟环境、安装依赖后：测试结果相同，场景仍 10/10 通过。
-- 新 HTML 报告已在浏览器检查，显示总体通过、各步状态及可展开证据。
-- CLI、MCP 和 HTTP 服务的 help 入口可运行。
-- 无 LLM 的 CLI 实际执行目录列举和 README 文件读取，工具调用均成功。
-- 正式 PDF 共 7 页，已提取文本并渲染检查中文、图表与命令排版。
-- 演示视频为实际运行结果可视化，1280×720、30 fps、180 秒；全量解码 5400 帧通过，抽取解码画面检查。无音轨，提供字幕。
+- 本机：macOS arm64，Python 3.13.13，327 passed、3 skipped、30 subtests passed。
+- 3 个跳过项为未打包的可选 Open WebUI 上游源码检查，不计为前端通过。
+- 公开制造运维场景：10/10 检查通过；合成输入，真实记忆实现；没有加载模型或请求 API。
+- 无 LLM 的 CLI 实际执行目录列举和 README 文件读取，两个工具调用成功。
+- CLI、MCP、HTTP 服务入口及相关回归通过。
+- 可选通用评测流水线实际完成，默认只运行本次公开行业样例。
+- 源码 ZIP 的逐文件 SHA-256 与 CRC 检查通过；重新安装和运行以该交付源码验证。
+- 7 页作品介绍已重新渲染检查；3 分钟视频完整解码 5400 帧，1280×720，无音轨，提供字幕。
 
-本次未验证 Windows/Linux 实机、大规模并发、语义模型、真实客户环境或私有评测。
-跨平台 CI 配置已提供，尚未在远程 CI 执行，不能当成实机通过记录。
+## 三平台远程验收
+
+GitHub Actions 第 4 次流水线：六组任务全部成功，耗时 1 分 47 秒。
+
+https://github.com/ply-01/osagent-runtime/actions/runs/39242910883
+
+核心代码提交：39069ac08c6f60d250d429c3931ee746282d51b8。
+此后提交仅同步验证说明、材料生成文字与源码哈希清单，不改变运行时。
+
+| 平台 | Python | 验收范围 | 结果 |
+|---|---|---|---|
+| ubuntu-latest | 3.11 / 3.13 | 安装、完整回归、公开场景、打包 | 两组通过 |
+| windows-latest | 3.11 / 3.13 | 安装、完整回归、公开场景、打包 | 两组通过 |
+| macos-latest | 3.11 / 3.13 | 安装、完整回归、公开场景、打包 | 两组通过 |
 
 ## 复核入口
 
@@ -25,7 +36,6 @@ os-agent track1 --scenario examples/track1/maintenance-handover.json --output ar
 python scripts/package-track1.py --output dist
 ```
 
-工作目录保存了 `artifacts/track1-tests.log`、`artifacts/track1-tests.xml`、
-`artifacts/release-tests.log`、`artifacts/track1-cli.json` 和 `artifacts/release-scenario.json`。
-这些是本机运行产物，不默认混入源码包。收到源码包的评审应自行运行生成新的证据。
-源码包中 SOURCE-MANIFEST.json 覆盖各文件 SHA-256，ZIP 同时检查 CRC 和解压后字节哈希。
+当前测试数量反映退役系统专用能力后的保留功能，不与原 375 项机械比较。
+本轮未验证真实客户、真实桌面控制闭环、语义模型质量、多进程并发和生产负载。
+通过这些测试不能证明软件不存在任何缺陷；如有失败应保存原始结果并修复，不能改写报告。

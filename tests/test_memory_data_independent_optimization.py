@@ -378,5 +378,3 @@ def test_system_state_is_not_persisted_as_a_user_preference() -> None:
     parser = MemoryFrameParser()
 
     assert parser.parse("the orbital retry window is set to seven") is None
-
-
