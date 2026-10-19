@@ -1,6 +1,6 @@
 # 开放原子 2026 赛道一源码交付
 
-通用安装、演示与验证入口见 README.md。本快照含 Python 后端、C++ 桥接源码、
+目标平台：macOS、Linux、Windows。通用安装、演示与验证入口见 README.md。本快照含 Python 后端、
 服务接入、公开仿真样例、部署脚本和测试。它不是离线依赖安装器。
 原始来源声明 commit：6ca20ca8155ae148cf95d874e068cf287e00cadf；原始快照未包含 Git 历史，
 该 commit 不代表新代码的版本。改造版从新仓库开始记录历史：
@@ -25,7 +25,6 @@ git -C vendor/open-webui apply ../patches/open-webui/0001-add-osagent-plugin-nav
 
 Python 依赖按 pyproject.toml 安装；uv.lock 可供选择相同版本。
 系统 SDK、模型、私有数据集、API Key、用户记忆和原始运行缓存不在源码包中。
-麒麟系统组件及授权由目标机器提供，不能按项目 Apache-2.0 重新授权。
 公开场景报告放在独立 artifacts 目录，可单独附上，默认源码包不包含运行状态。
 正式 PDF、演示视频及团队联系信息位于独立的本地提交材料目录，不混入公开源码。
 仓库和视频发布地址仍需补充，原代码权属须确认；详见 doc/track1/submission.md。

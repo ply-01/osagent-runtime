@@ -1,5 +1,0 @@
-{
-  "embedding_backend": "kylin_system",
-  "embedding_model": "ensemble-embd_gte-base_uint8-text",
-  "embedding_library_path": null
-}

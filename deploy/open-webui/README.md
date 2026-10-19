@@ -1,8 +1,8 @@
 # OSagent + Open WebUI
 
 This deployment runs a user-facing Open WebUI and one independently persisted
-OSagent memory service. The same Compose file is used on Windows Docker Desktop
-and on a Kylin Linux virtual machine.
+OSagent memory service. The same Compose file is used on macOS / Windows Docker Desktop
+and on Linux Docker Engine.
 
 ## Architecture
 
@@ -137,9 +137,9 @@ embedding path, so Open WebUI's pre-bundled Whisper and embedding models are not
 required. Open WebUI features that need those models may download them on first
 use.
 
-## Move to Kylin
+## Move to Linux
 
-Install Docker Engine and the Compose plugin in the Kylin VM, copy this
+Install Docker Engine and the Compose plugin on the Linux host, copy this
 repository, and update only these `.env` values:
 
 ```dotenv
@@ -151,7 +151,7 @@ OS_AGENT_EMBEDDING_BASE_URL=http://host.docker.internal:11434/v1
 Create the initial file with `sh deploy/open-webui/init.sh` before editing it.
 
 Then run the same `docker compose up -d --build`. The published WebUI address is
-`http://<kylin-vm-ip>:3000`; the memory API remains bound to the VM loopback and
+`http://<linux-host-ip>:3000`; the memory API remains bound to the VM loopback and
 is reached by Open WebUI over the private Compose network.
 
 Keep `WEBUI_SECRET_KEY`, `OS_AGENT_MEMORY_API_KEY`, `osagent-open-webui-data`,
@@ -164,6 +164,6 @@ Create a consistent backup while the services are briefly stopped:
 ./backup.ps1
 ```
 
-On Kylin use `sh backup.sh`. The restore scripts always create new named volumes
+On macOS/Linux use `sh backup.sh`. The restore scripts always create new named volumes
 and refuse to overwrite an existing volume. After restoring, set the two volume
 names printed by the script in `.env`, then start Compose normally.

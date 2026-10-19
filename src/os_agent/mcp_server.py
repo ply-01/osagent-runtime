@@ -26,7 +26,6 @@ from os_agent.memory.embedding_provider import (
     EmbeddingConfig,
     create_embedding_provider,
 )
-from os_agent.memory.kylin_vector_engine import kylin_vector_bridge_status
 from os_agent.memory.interface import (
     ForgetRequest,
     RecallRequest,
@@ -145,8 +144,6 @@ class OSAgentMCPService:
     def capabilities(self) -> dict[str, Any]:
         embedding_config = EmbeddingConfig.from_env()
         provider = create_embedding_provider(embedding_config)
-        bridge_status = kylin_vector_bridge_status()
-        native_vector_bridge = bool(bridge_status["loadable"])
         return {
             "service": "os-agent",
             "mcp": {
@@ -173,16 +170,7 @@ class OSAgentMCPService:
                 "enabled": provider.enabled,
                 "cache_namespace": provider.cache_namespace,
             },
-            "vector_store": {
-                "backend": (
-                    "kylin_system"
-                    if native_vector_bridge
-                    else "resident_sqlite_fallback"
-                ),
-                "native_bridge_installed": bool(bridge_status["installed"]),
-                "native_bridge_loadable": native_vector_bridge,
-                "native_bridge_error": bridge_status.get("error"),
-            },
+            "vector_store": {"backend": "resident_vectors", "cache": "sqlite"},
             "plugins": {
                 "marketplace": True,
                 "installation_enabled": _env_bool("OS_AGENT_PLUGIN_INSTALL_ENABLED", False),

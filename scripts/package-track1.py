@@ -14,7 +14,7 @@ TOP_LEVEL = {
     "THIRD_PARTY_NOTICES.md", "CONTRIBUTING.md", "GOVERNANCE.md", "ROADMAP.md",
     "SECURITY.md", "CHANGELOG.md", ".gitignore", ".gitmodules", ".dockerignore",
 }
-DIRECTORIES = {"src", "tests", "benchmarks", "scripts", "native", "integrations", "deploy", "examples", "skills", ".github"}
+DIRECTORIES = {"src", "tests", "benchmarks", "scripts", "integrations", "deploy", "examples", "skills", ".github"}
 EXCLUDED_PARTS = {"__pycache__", "node_modules", ".git", ".venv", ".pytest_cache"}
 
 
@@ -27,8 +27,7 @@ def collect_files(root: Path) -> dict[str, bytes]:
         name = relative.as_posix()
         allowed = (name in TOP_LEVEL or relative.parts[0] in DIRECTORIES
                    or (relative.parts[0] == "config" and path.suffix == ".json")
-                   or name.startswith("doc/track1/") or name.startswith("doc/evaluation/")
-                   or name in {"doc/legacy-kylin-readme.md", "doc/legacy-source-manifest.json"}
+                   or name.startswith("doc/track1/")
                    or name == "vendor/README.md" or name.startswith("vendor/patches/"))
         if not allowed or path.is_dir():
             continue

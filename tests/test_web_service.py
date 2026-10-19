@@ -197,12 +197,12 @@ class OSAgentWebServiceTests(unittest.TestCase):
                 uploaded = client.post(
                     "/v1/knowledge/upload?filename=notes.txt",
                     headers=headers,
-                    content="Kylin deployment uses the native OSagent memory service.".encode(),
+                    content="Portable deployment uses the native OSagent memory service.".encode(),
                 )
                 recalled = client.post(
                     "/v1/memory/recall",
                     headers={"Authorization": "Bearer test-service-key"},
-                    json={"query": "Kylin deployment native memory service", "limit": 5},
+                    json={"query": "Portable deployment native memory service", "limit": 5},
                 )
             self.assertEqual(uploaded.status_code, 200)
             self.assertEqual(uploaded.json()["data"]["filename"], "notes.txt")

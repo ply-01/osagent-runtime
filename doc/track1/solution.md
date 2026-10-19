@@ -28,7 +28,7 @@ MCP 和 HTTP 服务复用后端，Open WebUI 是可选第三方交互层。
 1. 事实带来源、证据、版本关系与作用域。流程更新时保留被替代版本，使当前状态和审计记录并存。
 2. 记忆以独立后端向 Agent Host 提供服务，接口与前端解耦，便于模型或 UI 更换。
 3. 分层记忆、按查询检索和上下文压缩限制长期任务的上下文增长。
-4. 银河麒麟系统 Embedding 与自有 C++ bridge 提供可选国产系统适配，需目标机单独验收。
+4. 同一运行时在 macOS、Linux、Windows 提供核心接口，以配置切换远程或本地语义模型。
 
 RRF、MCP、Open WebUI 和第三方 Embedding 模型不属于本项目原创。
 `mem0_*` 文件名表达记忆组织方式，不能据此认定与 Mem0 官方 SDK 相同；
@@ -51,7 +51,7 @@ RRF、MCP、Open WebUI 和第三方 Embedding 模型不属于本项目原创。
 
 ## 部署、风险与后续验证
 
-Python 核心可跨平台运行；麒麟 SDK 与完整 Open WebUI 为可选扩展。
+Python 核心面向 macOS、Linux、Windows；完整 Open WebUI 为可选第三方交互层。
 目前主要采用本地文件持久化，面向多进程并发、崩溃恢复和多租户服务需进一步验收。
 备份、访问控制、真实客户数据授权和需求收益证明应由试点补充。
 长期维护、社区流程及版本规划见 GOVERNANCE、CONTRIBUTING 和 ROADMAP。

@@ -83,13 +83,13 @@ def build_pdf(output, info, report, tests):
     finish()
     # 3
     begin('技术架构与开源路线','02 / ARCHITECTURE')
-    layers=[('应用接入','CLI / MCP Host / HTTP / 可选 Open WebUI'),('Agent 运行时','ContextBuilder / Planner / PlanValidator / AgentLoop / Hooks'),('工具与可观测性','文件与 PDF / 受控 Shell / 记忆接口 / Event / Session JSONL'),('统一记忆接口','remember / update / recall / forget'),('存储与检索','Core / Archival / Recall / STM；结构过滤、词法、可选语义与 RRF'),('平台扩展','本地文件与 SQLite；可选麒麟系统 Embedding / C++ 向量桥')]
+    layers=[('应用接入','CLI / MCP Host / HTTP / 可选 Open WebUI'),('Agent 运行时','ContextBuilder / Planner / PlanValidator / AgentLoop / Hooks'),('工具与可观测性','文件与 PDF / 受控 Shell / 记忆接口 / Event / Session JSONL'),('统一记忆接口','remember / update / recall / forget'),('存储与检索','Core / Archival / Recall / STM；结构过滤、词法、可选语义与 RRF'),('平台扩展','macOS / Linux / Windows；本地文件与 SQLite')]
     for label,body in layers:
         c.setFillColor(HexColor('#eef4f8'));c.roundRect(48,y-60,W-96,60,7,fill=1,stroke=0)
         c.setFont('CJK',12);c.setFillColor(teal);c.drawString(62,y-22,label)
         c.setFont('CJK',9);c.setFillColor(navy);c.drawString(62,y-43,body)
         y-=75
-    paragraph('通用运行链路不依赖麒麟 SDK。语义模型、Open WebUI 和系统原生向量能力按需接入，分别配置、分别验收。',style)
+    paragraph('核心运行链路使用三平台通用 Python 实现。语义模型与 Open WebUI 按需接入，分别配置、分别验收。',style)
     paragraph('源码定位：src/os_agent/agent/、tools/、events/、memory/；接入位于 mcp_server.py、web_service.py；行业样例入口为 track1.py。',small)
     finish()
     # 4
@@ -100,7 +100,7 @@ def build_pdf(output, info, report, tests):
     paragraph('事实具有实体、属性、值、作用域、证据、来源会话和版本关系。Core 保存当前事实，Archival 保存被替代版本。更新与遗忘通过统一接口执行，便于追溯当前状态的依据。')
     section('3. 接入、记忆和模型解耦')
     paragraph('MCP 与 HTTP 复用后端，长期记忆不绑定某个前端。结构过滤、多路检索与上下文压缩用于控制证据范围和上下文体积。可选系统桥接提供国产桌面环境适配。')
-    table([['能力','实现定位','本次证据'],['任务执行与轨迹','agent/loop.py、events/','规则规划、文件读取、Session 事件'],['事实更新与追溯','memory/module.py、mem0_core.py','新流程生效、旧流程进入历史'],['可复现的行业验证','track1.py、examples/track1/','JSON 输入、逐步真实输出与断言'],['可选麒麟适配','embedding_provider.py、native/','本次 macOS 未复验目标 SDK']],[106,164,W-366])
+    table([['能力','实现定位','本次证据'],['任务执行与轨迹','agent/loop.py、events/','规则规划、文件读取、Session 事件'],['事实更新与追溯','memory/module.py、mem0_core.py','新流程生效、旧流程进入历史'],['可复现的行业验证','track1.py、examples/track1/','JSON 输入、逐步真实输出与断言'],['三平台交付','embedding_provider.py、CI','通用存储与模型接口；远程 CI 分平台验收']],[106,164,W-366])
     paragraph('RRF、MCP、Open WebUI 与第三方模型不是本项目原创。本项目强调运行时与记忆状态机制的工程组织价值；没有新的独立同协议对比数据，不宣称算法首创或全面领先。',small)
     finish()
     # 5
@@ -131,9 +131,9 @@ def build_pdf(output, info, report, tests):
     paragraph('或按 README 使用 venv + pip install -e ".[dev]"。打开本次 run-* 中的 report.html 查看输入、输出和检查结果。MCP 与 HTTP 接入见命令帮助和部署指南。')
     table([['官方评审维度','对应材料'],['技术创新 30%','运行时、状态化记忆、接口解耦与自主实现边界'],['场景落地 30%','公开制造运维仿真、安装运行、真实输出和回归证据'],['开源治理 20%','许可证与依赖、贡献流程、Issue/PR、CI 和哈希清单'],['长期发展 20%','负责人及团队、治理流程、风险与后续迭代计划']],[140,W-236])
     section('提交材料与限制')
-    paragraph('本地交付包括作品介绍 PDF、核心功能演示 MP4、源码包和验证证据。官网同时要求可访问的代码仓库链接与演示视频链接；本地 ZIP 或 MP4 不能替代发布链接。仓库与视频尚未发布。')
+    paragraph('本地交付包括作品介绍 PDF、核心功能演示 MP4、源码包和验证证据。官网同时要求可访问的代码仓库链接与演示视频链接；本地 ZIP 或 MP4 不能替代发布链接。源码已上传私有仓库，视频发布地址仍待补充。')
     paragraph('提交截止：2026 年 10 月 31 日 24:00；收件地址：bjoscc@oschina.cn。入围后 11 月 13 日线下路演。报名确认邮件中的补充要求以组委会通知为准。',small)
-    paragraph('规则来源：www.oschina.net/oa2026/；按用户提供的官网规则核对。版本说明：2026-10-14 本地交付，未自动上传、报名或发送邮件。',small)
+    paragraph('规则来源：www.oschina.net/oa2026/；按用户提供的官网规则核对。版本说明：2026-10-19 通用平台交付，仓库已创建，未自动报名或发送邮件。',small)
     finish();c.save()
 
 
@@ -154,7 +154,7 @@ def build_video(output,report,runtime,tests,frames_dir):
     chapters=[]
     def add(title,subtitle,input_text,output_text,duration=10):chapters.append(dict(title=title,subtitle=subtitle,input=input_text,output=output_text,duration=duration))
     add('OSAgent Runtime','操作系统智能体开发运行平台 | 北京航空航天大学','核心能力：有界任务运行、工具接入、事件轨迹与长期记忆。','本视频按实际运行日志可视化展示。制造运维数据为公开合成输入。',12)
-    add('01 安装与启动','通用软件入口；不依赖麒麟 SDK 或 API Key','uv sync --frozen --extra dev\nuv run os-agent run "列出文件并读取 README.md" --no-llm','下面展示规则规划路径执行真实文件工具，以及生成 Session 轨迹。',12)
+    add('01 安装与启动','通用软件入口；支持 macOS / Linux / Windows；演示无需 API Key','uv sync --frozen --extra dev\nuv run os-agent run "列出文件并读取 README.md" --no-llm','下面展示规则规划路径执行真实文件工具，以及生成 Session 轨迹。',12)
     add('02 Agent 任务运行','真实 CLI 输出节选；规则规划，不是大模型推理','os-agent run "列出文件并读取 README.md"\n--no-llm --workspace . --session-id track1-runtime',runtime[runtime.find('OSAgent Runtime 已完成'):runtime.find('新增记忆:')].strip(),14)
     add('03 启动行业场景','制造运维知识交接 / 显式结构化输入','os-agent track1 --scenario\nexamples/track1/maintenance-handover.json','创建独立 run-* 目录，通过真实 AgentMemoryModule 执行持久化、更新、追溯与遗忘。',10)
     for index,step in enumerate(report['steps'],1):
@@ -174,8 +174,8 @@ def build_video(output,report,runtime,tests,frames_dir):
         status=f'检查 {passed}/{len(checks)} 通过' if checks else '操作成功'
         if not step['passed']:status='检查失败'
         add(f'{index+3:02d} {step["title"]}',step['action']+' | '+status,input_text,output_text,9)
-    add('16 验证与开源交付','本机回归、独立安装及源码完整性',f'python -m pytest -q\n{tests[0]} passed / {tests[1]} skipped\n另有 30 个 subtests passed',f'公开场景检查 {report["checks_passed"]}/{report["checks_total"]} 通过。\n4 项跳过涉及缺失的可选前端源码，不计为通过。\n交付源码、许可证、治理文档及 SHA-256 清单。',12)
-    add('17 使用范围与后续工作','仿真功能证据；不虚构生产客户、语义质量或自主桌面闭环','本次：macOS / Python 3.13.13\n无 LLM、无 Embedding 模型、无麒麟 SDK','后续：真实行业需求验证、授权数据试点、并发与恢复、身份隔离、独立质量对比。\n公开仓库、视频链接和代码权属确认仍需负责人完成。',12)
+    add('16 验证与开源交付','本机回归、独立安装及源码完整性',f'python -m pytest -q\n{tests[0]} passed / {tests[1]} skipped\n另有 30 个 subtests passed',f'公开场景检查 {report["checks_passed"]}/{report["checks_total"]} 通过。\n{tests[1]} 项跳过涉及缺失的可选前端源码，不计为通过。\n交付源码、许可证、治理文档及 SHA-256 清单。',12)
+    add('17 使用范围与后续工作','仿真功能证据；不虚构生产客户、语义质量或自主桌面闭环','本次：macOS / Python 3.13.13\n无 LLM、无 Embedding 模型','后续：真实行业需求验证、授权数据试点、并发与恢复、身份隔离、独立质量对比。\n仓库公开访问、视频链接和代码权属确认仍需负责人完成。',12)
     concat=[];srt=[];cursor=0
     def clock(sec):
         ms=round(sec*1000);return f'{ms//3600000:02}:{ms//60000%60:02}:{ms//1000%60:02},{ms%1000:03}'

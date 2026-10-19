@@ -20,7 +20,7 @@ class FactCard:
     (entity + attribute + value) with full provenance.
     """
 
-    entity: str          # 主体，如 "用户"、"os-agent项目"、"麒麟OS"
+    entity: str          # 主体，如 "用户"、"os-agent项目"、"操作系统"
     attribute: str       # 属性，如 "输出格式偏好"、"预算上限"、"Python版本"
     value: Any           # 值，如 "PDF"、800、"3.11+"
     evidence: str        # 原始证据文本（对话片段或工具结果摘要）

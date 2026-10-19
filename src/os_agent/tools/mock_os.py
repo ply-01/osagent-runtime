@@ -16,7 +16,7 @@ class MockAppStateTool(Tool):
         def action() -> dict[str, Any]:
             return {
                 "active_app": arguments.get("app", "workspace"),
-                "platform": "mock-kylin-desktop",
+                "platform": "mock-desktop",
                 "windows": ["terminal", "file-manager", "browser"],
             }
 

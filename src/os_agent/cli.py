@@ -372,31 +372,6 @@ def _add_subagent_parser(subparsers: argparse._SubParsersAction) -> None:
     )
 
 
-def _add_competition_parser(subparsers: argparse._SubParsersAction) -> None:
-    parser = subparsers.add_parser(
-        "competition",
-        help="Inspect competition deployment readiness.",
-    )
-    competition_sub = parser.add_subparsers(dest="competition_command")
-    preflight_p = competition_sub.add_parser(
-        "preflight",
-        help="Check Galaxy Kylin V11 and required system SDKs.",
-    )
-    preflight_p.add_argument(
-        "--os-release",
-        default="/etc/os-release",
-        help="OS release metadata path used for platform verification.",
-    )
-    preflight_p.add_argument("--json", action="store_true", help="Output JSON.")
-    smoke_p = competition_sub.add_parser(
-        "vector-smoke",
-        help="Run a real Kylin embedding/vector write, search, and delete check.",
-    )
-    smoke_p.add_argument(
-        "--root",
-        help="Memory root used for the smoke collection state file.",
-    )
-    smoke_p.add_argument("--json", action="store_true", help="Output JSON.")
 
 
 # ---------------------------------------------------------------------------
@@ -415,8 +390,6 @@ Subcommands:
   memory-config
             View or tune memory runtime parameters.
   subagent  Run or inspect the native memory subagent.
-  competition
-            Inspect optional Galaxy Kylin readiness.
   track1    Replay a portable OpenAtom industry scenario.
 
 Run 'os-agent <subcommand> --help' for details on each subcommand.
@@ -443,7 +416,6 @@ def _build_top_parser() -> argparse.ArgumentParser:
     _add_config_parser(subparsers)
     _add_memory_config_parser(subparsers)
     _add_subagent_parser(subparsers)
-    _add_competition_parser(subparsers)
     track = subparsers.add_parser("track1", help="Run the OpenAtom industry-solution scenario.")
     track.add_argument("--scenario", type=Path, required=True, help="Public JSON scenario path.")
     track.add_argument("--output", type=Path, default=Path("artifacts/track1"))
@@ -478,7 +450,6 @@ def main(argv: list[str] | None = None) -> None:
         "config": _handle_config,
         "memory-config": _handle_memory_config,
         "subagent": _handle_subagent,
-        "competition": _handle_competition,
         "track1": _handle_track1,
     }
 
@@ -577,28 +548,6 @@ def _handle_track1(args: argparse.Namespace) -> None:
         raise SystemExit(1)
 
 
-def _handle_competition(args: argparse.Namespace) -> None:
-    from os_agent.competition import (
-        run_competition_preflight,
-        run_competition_vector_smoke,
-    )
-
-    if args.competition_command == "preflight":
-        report = run_competition_preflight(os_release_path=args.os_release)
-    elif args.competition_command == "vector-smoke":
-        report = run_competition_vector_smoke(root=args.root)
-    else:
-        print(
-            "Choose the competition subcommand: preflight or vector-smoke",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-    print(report.to_json() if args.json else report.to_text())
-    successful = getattr(report, "ready", None)
-    if successful is None:
-        successful = report.passed
-    if not successful:
-        sys.exit(1)
 
 
 # -------------------------------------------------------------------

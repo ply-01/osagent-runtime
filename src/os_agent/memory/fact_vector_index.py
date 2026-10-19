@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 from os_agent.memory.embedding_cache import EmbeddingCache, SqliteEmbeddingCache
@@ -32,13 +31,11 @@ class FactSemanticIndex:
         cache: EmbeddingCache | SqliteEmbeddingCache | None = None,
         batch_size: int = 128,
         vector_store: Any | None = None,
-        vector_store_root: Path | None = None,
     ) -> None:
         self.provider = provider or create_embedding_provider()
         self.cache = cache or EmbeddingCache()
         self.batch_size = max(batch_size, 1)
         self.vector_store = vector_store
-        self.vector_store_root = Path(vector_store_root) if vector_store_root else None
         self._resident_texts: tuple[str, ...] = ()
         self._resident_keys: tuple[tuple[str, str], ...] = ()
         self._resident_key_to_row: dict[tuple[str, str], int] = {}
@@ -79,7 +76,6 @@ class FactSemanticIndex:
             self._clear_resident()
             return 0
         self._set_resident(facts, texts, vectors)
-        self._ensure_kylin_store(vectors)
         if self.vector_store is not None:
             self.vector_store.replace(
                 [(self._key_text(fact), vector) for fact, vector in zip(facts, vectors)]
@@ -129,7 +125,6 @@ class FactSemanticIndex:
             return []
         if not query_vectors or not query_vectors[0]:
             return []
-        self._ensure_kylin_store(fact_vectors)
         if self.vector_store is not None:
             by_key = {self._key_text(fact): fact for fact in facts}
             hits: list[FactSemanticHit] = []
@@ -334,17 +329,6 @@ class FactSemanticIndex:
         fact_id, updated_at = cls._fact_key(fact)
         return f"fact:{fact_id}:{updated_at}"
 
-    def _ensure_kylin_store(self, vectors: list[list[float]]) -> None:
-        if self.vector_store is not None or self.vector_store_root is None:
-            return
-        if not getattr(self.provider, "is_kylin_system", False) or not vectors:
-            return
-        from os_agent.memory.kylin_vector_engine import KylinVectorEngine
-
-        dimension = len(vectors[0])
-        self.vector_store = KylinVectorEngine.from_environment(
-            self.vector_store_root, kind="facts", dimension=dimension
-        )
 
     @staticmethod
     def _cosine(left: list[float], right: list[float]) -> float:

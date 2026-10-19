@@ -11,8 +11,7 @@ OSAgent Runtime 面向智能体开发与运行，提供有界规划、工具调�
 
 ## 5 分钟复现
 
-需要 Python 3.11+；支持 macOS、Linux、Windows。运行本地演示无需 API Key、模型下载、
-麒麟 SDK 或 Open WebUI。首次安装 Python 依赖需要网络；安装后该演示离线运行。完整测试还需要 `rg`（ripgrep）命令。
+需要 Python 3.11+；支持 macOS、Linux、Windows。运行本地演示无需 API Key、模型下载或 Open WebUI。首次安装 Python 依赖需要网络；安装后该演示离线运行。完整测试还需要 `rg`（ripgrep）命令。
 如已安装 uv，可用 `uv sync --frozen --extra dev` 复用锁定版本。
 
 ```bash
@@ -61,26 +60,23 @@ python scripts/package-track1.py --output dist
                      ↓
   结构过滤 + 词法 / 可选语义检索 + RRF + 上下文压缩
                      ↓
-     本地文件 / SQLite / 可选麒麟原生向量桥
+     本地文件 / SQLite / 通用向量检索
 ```
 
 核心实现位于 `src/os_agent/`，Open WebUI 接入位于 `integrations/`，
-麒麟 V11 部署位于 `deploy/galaxy-kylin-v11/`。
+可选 Docker Compose 部署位于 `deploy/open-webui/`。
 `os-agent --help`、`os-agent-mcp --help`、`os-agent-web --help` 可查看运行入口。
 默认使用回环服务和有界工具权限；面向多租户生产部署仍需要身份、存储隔离和运维验收。
 
 ## 平台能力与验证边界
 
-本次赛道不限定系统或 SDK。`os-agent competition preflight` 和 `vector-smoke`
-是**可选麒麟专用检查**，不作为本次赛道一的通用准入条件。
-麒麟系统 Embedding 和 C++ bridge 需目标机 SDK、运行时和授权；macOS 离线演示
-不能证明麒麟加速、完整桌面控制、语义模型效果或真实客户落地。
+目标平台为 macOS、Linux、Windows，使用 Python 通用运行时。核心 Agent、文件工具、记忆、CLI、MCP、HTTP 和离线行业样例不依赖系统专用 SDK。
+可选桌面输入依赖 Linux 的 xdotool/ydotool，未配置时保持关闭，不属于三平台核心验收。
+可选浏览器功能需要单独安装浏览器与 Playwright。
 
-公开演示调用现有真实记忆接口，使用显式结构化输入及词法检索；
-检查成功率不是自然语言抽取准确率，也不是官方比赛分数。
-历史评测保留在 `doc/evaluation/`，只作既有记录，本次没有重新跑这些私有数据集。
-旧麒麟项目材料见 [历史 README](doc/legacy-kylin-readme.md)，其中缺失外部文件的链接及
-旧专项赛门槛不适用于本次交付。历史来源哈希保存在 `doc/legacy-source-manifest.json`。
+公开演示使用显式结构化输入及词法检索；检查成功率不是自然语言抽取准确率、生产性能或官方比赛分数。
+三平台 / Python 3.11、3.13 的 CI 会执行安装、完整回归、场景重放和打包；实际完成状态见 Actions。
+当前本机验证范围和结果见 [验证记录](doc/track1/validation.md)。
 
 ## 开源与来源
 

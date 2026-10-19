@@ -10,7 +10,6 @@ from os_agent.browser.qianxin import (
     QianxinBrowserController,
     _click_page_target,
     _editable_locator,
-    _kaiming_command,
     _looks_like_qianxin,
     _workspace_path,
 )
@@ -21,17 +20,6 @@ class QianxinBrowserTests(unittest.TestCase):
         self.assertTrue(_looks_like_qianxin("/usr/bin/qianxin-browser"))
         self.assertFalse(_looks_like_qianxin("/usr/bin/firefox"))
 
-    def test_kare_launcher_uses_desktop_entry_shape(self) -> None:
-        self.assertEqual(
-            _kaiming_command("/opt/kaiming/bin/top.openkylin.qaxbrowser-safe-stable"),
-            [
-                "/opt/kaiming-tools/bin/kaiming",
-                "run",
-                "--command=/usr/bin/qaxbrowser-safe-stable",
-                "top.openkylin.qaxbrowser-safe-stable",
-                "--",
-            ],
-        )
 
     def test_computer_use_is_disabled_by_default(self) -> None:
         with TemporaryDirectory() as tmp, patch.dict(os.environ, {}, clear=True):
@@ -55,7 +43,7 @@ class QianxinBrowserTests(unittest.TestCase):
             self.assertEqual(restarted.mode, "allowlist")
             self.assertTrue(policy_path.exists())
 
-    def test_kaiming_launcher_exit_does_not_abort_cdp_wait(self) -> None:
+    def test_detached_launcher_exit_does_not_abort_cdp_wait(self) -> None:
         with TemporaryDirectory() as tmp:
             controller = QianxinBrowserController(Path(tmp))
             controller._process = Mock()

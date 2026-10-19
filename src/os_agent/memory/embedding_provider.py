@@ -2,14 +2,10 @@
 
 from __future__ import annotations
 
-import ctypes
-import ctypes.util
 import json
 import os
-import threading
 import urllib.error
 import urllib.request
-from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
@@ -23,14 +19,6 @@ class EmbeddingError(RuntimeError):
     """Raised when an embedding provider cannot return vectors."""
 
 
-class _KylinEmbeddingCallError(EmbeddingError):
-    """Preserve the SDK error code for bounded transient recovery."""
-
-    def __init__(self, error_code: int, detail: str) -> None:
-        self.error_code = error_code
-        super().__init__(
-            f"Kylin embedding failed with error code {error_code}: {detail}"
-        )
 
 
 class EmbeddingProvider(Protocol):
@@ -64,7 +52,6 @@ class EmbeddingConfig:
     onnx_filename: str = "onnx/model_qint8_avx512_vnni.onnx"
     onnx_path: str | None = None
     onnx_threads: int = 8
-    library_path: str | None = None
 
     @classmethod
     def from_env(cls) -> EmbeddingConfig:
@@ -167,10 +154,6 @@ class EmbeddingConfig:
                 ),
                 0,
             ),
-            library_path=(
-                os.getenv("OS_AGENT_EMBEDDING_LIBRARY_PATH")
-                or file_config.get("embedding_library_path")
-            ),
         )
 
     @classmethod
@@ -263,268 +246,6 @@ class OpenAICompatibleEmbeddingProvider:
             raise EmbeddingError(f"Unexpected embedding response: {data}") from exc
 
 
-class KylinSystemEmbeddingProvider:
-    """Galaxy Kylin text embeddings through the system SDK C ABI."""
-
-    _TRANSIENT_ERROR_CODES = frozenset({3})
-    _LIBRARY_NAMES = (
-        "libkysdk-coreai-embedding.so.1",
-        "libkysdk-coreai-embedding.so",
-        "kysdk-coreai-embedding",
-    )
-
-    def __init__(
-        self,
-        config: EmbeddingConfig | None = None,
-        *,
-        library_loader: Callable[[str], Any] | None = None,
-    ) -> None:
-        self.config = config or EmbeddingConfig.from_env()
-        self._library_loader = library_loader or ctypes.CDLL
-        self._library: Any = None
-        self._session: ctypes.c_void_p | None = None
-        self._lock = threading.RLock()
-
-    @property
-    def enabled(self) -> bool:
-        # Selecting this backend is explicit. Runtime failures must surface instead
-        # of silently disabling semantic retrieval or switching providers.
-        return True
-
-    @property
-    def is_kylin_system(self) -> bool:
-        """Marker used to enable the mandatory Kylin vector-engine path."""
-        return True
-
-    @property
-    def required(self) -> bool:
-        return True
-
-    @property
-    def cache_namespace(self) -> str:
-        model = self.config.model or "system-default"
-        return f"kylin-system|abi=1|model={model}"
-
-    def embed_queries(self, texts: list[str]) -> list[list[float]]:
-        return self._embed(texts)
-
-    def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        return self._embed(texts)
-
-    def embed_texts(self, texts: list[str]) -> list[list[float]]:
-        return self._embed(texts)
-
-    def close(self) -> None:
-        with self._lock:
-            if self._session is None or self._library is None:
-                return
-            session = self._session
-            self._session = None
-            self._library.text_embedding_destroy_session(ctypes.byref(session))
-
-    def _embed(self, texts: list[str]) -> list[list[float]]:
-        if not texts:
-            return []
-        with self._lock:
-            self._ensure_session()
-            vectors: list[list[float]] = []
-            for text in texts:
-                try:
-                    vector = self._embed_one(text)
-                except _KylinEmbeddingCallError as exc:
-                    if exc.error_code not in self._TRANSIENT_ERROR_CODES:
-                        raise
-                    self.close()
-                    self._ensure_session()
-                    vector = self._embed_one(text)
-                vectors.append(vector)
-        dimensions = {len(vector) for vector in vectors}
-        if len(dimensions) != 1 or 0 in dimensions:
-            raise EmbeddingError(
-                "Kylin embedding SDK returned inconsistent vector dimensions"
-            )
-        return vectors
-
-    def _ensure_session(self) -> None:
-        if self._session is not None:
-            return
-        library = self._load_library()
-        try:
-            self._configure_abi(library)
-        except AttributeError as exc:
-            raise EmbeddingError(
-                "Kylin embedding library is ABI-incompatible: "
-                f"missing required symbol {exc}"
-            ) from exc
-        raw_session = library.text_embedding_create_session()
-        if not raw_session:
-            raise EmbeddingError("Kylin embedding SDK could not create a session")
-        session = (
-            raw_session
-            if isinstance(raw_session, ctypes.c_void_p)
-            else ctypes.c_void_p(raw_session)
-        )
-        try:
-            error_code = int(library.text_embedding_init_session(session))
-            if error_code != 0:
-                raise EmbeddingError(
-                    "Kylin embedding runtime initialization failed "
-                    f"with error code {error_code}"
-                )
-            init_model = getattr(library, "text_embedding_init_model", None)
-            if self.config.model and init_model is not None:
-                error_code = int(
-                    init_model(session, self.config.model.encode("utf-8"))
-                )
-                if error_code != 0:
-                    raise EmbeddingError(
-                        f"Kylin embedding model {self.config.model!r} failed to load "
-                        f"with error code {error_code}"
-                    )
-            elif self.config.model:
-                model_info = self._get_model_info(library, session)
-                actual_model = str(model_info.get("name") or "")
-                if not actual_model:
-                    raise EmbeddingError(
-                        "Kylin embedding SDK did not report the active model"
-                    )
-                if actual_model != self.config.model:
-                    raise EmbeddingError(
-                        "Kylin embedding runtime model mismatch: configured "
-                        f"{self.config.model!r}, active {actual_model!r}"
-                    )
-        except Exception:
-            library.text_embedding_destroy_session(ctypes.byref(session))
-            raise
-        self._library = library
-        self._session = session
-
-    @staticmethod
-    def _get_model_info(library: Any, session: ctypes.c_void_p) -> dict[str, Any]:
-        get_model_info = getattr(library, "text_embedding_get_model_info", None)
-        destroy_model_info = getattr(library, "embedding_model_info_destroy", None)
-        if get_model_info is None or destroy_model_info is None:
-            raise EmbeddingError(
-                "Kylin embedding library cannot select or report the active model"
-            )
-        result = ctypes.c_char_p()
-        try:
-            if (
-                not bool(get_model_info(session, ctypes.byref(result)))
-                or not result.value
-            ):
-                raise EmbeddingError(
-                    "Kylin embedding SDK could not report the active model"
-                )
-            try:
-                model_info = json.loads(result.value.decode("utf-8"))
-            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-                raise EmbeddingError(
-                    "Kylin embedding SDK returned invalid model information"
-                ) from exc
-            if not isinstance(model_info, dict):
-                raise EmbeddingError(
-                    "Kylin embedding SDK returned invalid model information"
-                )
-            return model_info
-        finally:
-            if result.value:
-                destroy_model_info(result)
-
-    def _embed_one(self, text: str) -> list[float]:
-        if self._library is None or self._session is None:
-            raise EmbeddingError("Kylin embedding session is not initialized")
-        result = ctypes.c_void_p()
-        try:
-            success = bool(
-                self._library.text_embedding(
-                    self._session,
-                    text.encode("utf-8"),
-                    ctypes.byref(result),
-                )
-            )
-            if not result.value:
-                raise EmbeddingError("Kylin embedding SDK returned no result")
-            error_code = int(
-                self._library.embedding_result_get_error_code(result)
-            )
-            if not success or error_code != 0:
-                message = self._library.embedding_result_get_error_message(result)
-                detail = (
-                    message.decode("utf-8", errors="replace")
-                    if message
-                    else "unknown error"
-                )
-                raise _KylinEmbeddingCallError(error_code, detail)
-            length = int(self._library.embedding_result_get_vector_length(result))
-            data = self._library.embedding_result_get_vector_data(result)
-            if length <= 0 or not data:
-                raise EmbeddingError("Kylin embedding SDK returned an empty vector")
-            return [float(data[index]) for index in range(length)]
-        finally:
-            if result.value:
-                self._library.embedding_result_destroy(ctypes.byref(result))
-
-    def _load_library(self) -> Any:
-        failures: list[str] = []
-        for candidate in kylin_embedding_library_candidates(self.config):
-            try:
-                return self._library_loader(candidate)
-            except OSError as exc:
-                failures.append(f"{candidate}: {exc}")
-        detail = "; ".join(failures) if failures else "no library candidate found"
-        raise EmbeddingError(
-            "Kylin system embedding library is unavailable; install "
-            f"libkylin-coreai-embedding or set OS_AGENT_EMBEDDING_LIBRARY_PATH ({detail})"
-        )
-
-    @staticmethod
-    def _configure_abi(library: Any) -> None:
-        library.text_embedding_create_session.argtypes = []
-        library.text_embedding_create_session.restype = ctypes.c_void_p
-        library.text_embedding_destroy_session.argtypes = [
-            ctypes.POINTER(ctypes.c_void_p)
-        ]
-        library.text_embedding_destroy_session.restype = None
-        library.text_embedding_init_session.argtypes = [ctypes.c_void_p]
-        library.text_embedding_init_session.restype = ctypes.c_int
-        init_model = getattr(library, "text_embedding_init_model", None)
-        if init_model is not None:
-            init_model.argtypes = [
-                ctypes.c_void_p,
-                ctypes.c_char_p,
-            ]
-            init_model.restype = ctypes.c_int
-        get_model_info = getattr(library, "text_embedding_get_model_info", None)
-        destroy_model_info = getattr(library, "embedding_model_info_destroy", None)
-        if get_model_info is not None and destroy_model_info is not None:
-            get_model_info.argtypes = [
-                ctypes.c_void_p,
-                ctypes.POINTER(ctypes.c_char_p),
-            ]
-            get_model_info.restype = ctypes.c_bool
-            destroy_model_info.argtypes = [ctypes.c_char_p]
-            destroy_model_info.restype = None
-        library.text_embedding.argtypes = [
-            ctypes.c_void_p,
-            ctypes.c_char_p,
-            ctypes.POINTER(ctypes.c_void_p),
-        ]
-        library.text_embedding.restype = ctypes.c_bool
-        library.embedding_result_get_vector_data.argtypes = [ctypes.c_void_p]
-        library.embedding_result_get_vector_data.restype = ctypes.POINTER(
-            ctypes.c_float
-        )
-        library.embedding_result_get_vector_length.argtypes = [ctypes.c_void_p]
-        library.embedding_result_get_vector_length.restype = ctypes.c_int
-        library.embedding_result_get_error_code.argtypes = [ctypes.c_void_p]
-        library.embedding_result_get_error_code.restype = ctypes.c_int
-        library.embedding_result_get_error_message.argtypes = [ctypes.c_void_p]
-        library.embedding_result_get_error_message.restype = ctypes.c_char_p
-        library.embedding_result_destroy.argtypes = [
-            ctypes.POINTER(ctypes.c_void_p)
-        ]
-        library.embedding_result_destroy.restype = None
 
 class LocalTransformerEmbeddingProvider:
     """Lazy local embedding provider implemented with torch and transformers."""
@@ -803,23 +524,11 @@ def create_embedding_provider(
         return LocalOnnxEmbeddingProvider(resolved)
     if backend in {"local", "local_transformers", "transformers"}:
         return LocalTransformerEmbeddingProvider(resolved)
-    if backend in {"kylin", "kylin_system", "system_kylin"}:
-        return KylinSystemEmbeddingProvider(resolved)
     if backend in {"openai", "openai_compatible", "remote"}:
         return OpenAICompatibleEmbeddingProvider(resolved)
     raise EmbeddingError(f"Unsupported embedding backend: {resolved.backend}")
 
 
-def kylin_embedding_library_candidates(config: EmbeddingConfig) -> list[str]:
-    """Return deterministic loader candidates for the Kylin SDK shared library."""
-    if config.library_path:
-        return [config.library_path]
-    candidates: list[str] = []
-    discovered = ctypes.util.find_library("kysdk-coreai-embedding")
-    if discovered:
-        candidates.append(discovered)
-    candidates.extend(KylinSystemEmbeddingProvider._LIBRARY_NAMES)
-    return list(dict.fromkeys(candidates))
 
 
 def _as_bool(value: object, *, default: bool) -> bool:

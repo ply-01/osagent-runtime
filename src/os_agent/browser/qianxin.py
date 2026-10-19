@@ -253,8 +253,7 @@ class QianxinBrowserController:
         profile = self.workspace / ".qianxin-browser-profile"
         profile.mkdir(parents=True, exist_ok=True)
         self._profile_dir = profile
-        uses_kaiming_launcher = _is_kaiming_launcher(executable)
-        command = _kaiming_command(executable) if uses_kaiming_launcher else [executable]
+        command = [executable]
         browser_args = [
             f"--remote-debugging-port={self.port}",
             f"--user-data-dir={profile}",
@@ -276,11 +275,7 @@ class QianxinBrowserController:
                 self._process_group_id = os.getpgid(self._process.pid)
             except ProcessLookupError:
                 self._process_group_id = None
-        # Kaiming launches the sandboxed application and then exits. Its short-lived
-        # wrapper is not the browser lifecycle signal, so wait for CDP instead.
-        status = self._wait_until_connected(
-            launcher_may_detach=uses_kaiming_launcher,
-        )
+        status = self._wait_until_connected()
         return {
             **status,
             "launched": True,
@@ -388,7 +383,7 @@ class QianxinBrowserController:
                     target = _workspace_path(self.workspace, kwargs["screenshot_path"])
                     target.parent.mkdir(parents=True, exist_ok=True)
                     # Dynamic pages can continuously change their document height.
-                    # A bounded viewport capture is reliable on Kylin's Chromium 102.
+                    # A bounded viewport capture avoids unbounded dynamic document height.
                     page.screenshot(
                         path=str(target),
                         full_page=False,
@@ -406,7 +401,6 @@ class QianxinBrowserController:
         for directory in (
             Path.home() / ".local/share/applications",
             Path("/usr/share/applications"),
-            Path("/opt/kaiming/share/applications"),
         ):
             if directory.is_dir():
                 for desktop in directory.glob("*.desktop"):
@@ -415,11 +409,6 @@ class QianxinBrowserController:
                     except OSError:
                         continue
                     if any(token in content.casefold() for token in ("qianxin", "qax", "可信浏览器")):
-                        for line in content.splitlines():
-                            if line.startswith("X-Kaiming="):
-                                app_id = line.split("=", 1)[1].strip()
-                                if app_id:
-                                    candidates.append(f"/opt/kaiming/bin/{app_id}")
                         for line in content.splitlines():
                             if line.startswith("Exec="):
                                 try:
@@ -575,9 +564,6 @@ def _workspace_path(workspace: Path, value: str) -> Path:
     return target
 
 
-def _is_kaiming_launcher(path: str) -> bool:
-    normalized = path.replace("\\", "/").casefold()
-    return "/kaiming/" in normalized or "top.openkylin.qaxbrowser" in normalized
 
 
 def _env_bool(name: str, default: bool) -> bool:
@@ -622,16 +608,6 @@ def _unrestricted_mode_confirmed() -> bool:
     )
 
 
-def _kaiming_command(executable: str) -> list[str]:
-    app_id = Path(executable).name
-    command_name = app_id.removeprefix("top.openkylin.")
-    return [
-        "/opt/kaiming-tools/bin/kaiming",
-        "run",
-        f"--command=/usr/bin/{command_name}",
-        app_id,
-        "--",
-    ]
 
 
 def _is_public_host(hostname: str) -> bool:

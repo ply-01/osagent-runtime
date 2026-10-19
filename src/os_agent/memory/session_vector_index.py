@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from pathlib import Path
 
 from os_agent.memory.embedding_cache import EmbeddingCache, SqliteEmbeddingCache
 from os_agent.memory.embedding_provider import (
@@ -31,13 +30,11 @@ class SessionSemanticIndex:
         cache: EmbeddingCache | SqliteEmbeddingCache | None = None,
         batch_size: int = 128,
         vector_store: object | None = None,
-        vector_store_root: Path | None = None,
     ) -> None:
         self.provider = provider or create_embedding_provider()
         self.cache = cache or EmbeddingCache()
         self.batch_size = max(batch_size, 1)
         self.vector_store = vector_store
-        self.vector_store_root = Path(vector_store_root) if vector_store_root else None
         self._resident_texts: tuple[str, ...] = ()
         self._resident_keys: tuple[str, ...] = ()
         self._resident_vectors: list[list[float]] = []
@@ -67,7 +64,6 @@ class SessionSemanticIndex:
         self._resident_texts = tuple(texts)
         self._resident_keys = tuple(self._key_text(document) for document in documents)
         self._resident_vectors = vectors
-        self._ensure_kylin_store(vectors)
         if self.vector_store is not None:
             self.vector_store.replace(
                 [(self._key_text(document), vector) for document, vector in zip(documents, vectors)]
@@ -113,7 +109,6 @@ class SessionSemanticIndex:
             ):
                 raise
             return []
-        self._ensure_kylin_store(document_vectors)
         if self.vector_store is not None:
             by_key = {self._key_text(document): document for document in documents}
             return [
@@ -147,16 +142,6 @@ class SessionSemanticIndex:
     def _key_text(document: SessionDocument) -> str:
         return f"session:{document.document_id}"
 
-    def _ensure_kylin_store(self, vectors: list[list[float]]) -> None:
-        if self.vector_store is not None or self.vector_store_root is None:
-            return
-        if not getattr(self.provider, "is_kylin_system", False) or not vectors:
-            return
-        from os_agent.memory.kylin_vector_engine import KylinVectorEngine
-
-        self.vector_store = KylinVectorEngine.from_environment(
-            self.vector_store_root, kind="sessions", dimension=len(vectors[0])
-        )
 
     def _embed_with_cache(self, texts: list[str], *, kind: str) -> list[list[float]]:
         namespace = f"{self.provider.cache_namespace}|{kind}"

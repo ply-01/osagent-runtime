@@ -76,7 +76,7 @@ def run_scenario(scenario_path: Path, output: Path) -> dict:
         "schema_version": 1, "scenario": scenario["name"],
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "environment": {"python": platform.python_version(), "platform": platform.platform()},
-        "profile": "offline lexical retrieval; no LLM, embeddings or Kylin SDK",
+        "profile": "offline lexical retrieval; no LLM or embeddings",
         "data_kind": "public synthetic scenario; not customer data or quality benchmark",
         "run_directory": run_root.name,
         "passed": bool(checks) and all(c["passed"] for c in checks) and all(s["passed"] for s in trace),

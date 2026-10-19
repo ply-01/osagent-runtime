@@ -46,7 +46,7 @@ class DesktopControllerTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "20,000"):
                     controller.execute("type", text="x" * 20_001)
 
-    def test_ydotool_uses_kylin_v11_mouse_syntax(self) -> None:
+    def test_ydotool_uses_legacy_mouse_syntax(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
             policy = root / "policy.json"

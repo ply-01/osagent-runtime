@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import ctypes
 
 from os_agent.memory.embedding_cache import EmbeddingCache
 from os_agent.memory.fact_vector_index import FactSemanticIndex
 from os_agent.memory.interface import RecallRequest, RememberRequest, UpdateRequest
-from os_agent.memory.kylin_vector_engine import KylinVectorEngine
 from os_agent.memory.mem0_archival import ArchivalMemoryStore
 from os_agent.memory.mem0_core import CoreMemoryStore
 from os_agent.memory.mem0_pipeline import ExtractUpdatePipeline
@@ -382,30 +380,3 @@ def test_system_state_is_not_persisted_as_a_user_preference() -> None:
     assert parser.parse("the orbital retry window is set to seven") is None
 
 
-def test_kylin_abi_v2_key_avoids_numeric_id_rebuild() -> None:
-    payload = ctypes.create_string_buffer(b"17\t0.875\tfact:alpha")
-
-    class Library:
-        def osagent_kylin_vector_search(self, *args: object) -> int:
-            ctypes.cast(args[6], ctypes.POINTER(ctypes.c_void_p))[0] = ctypes.cast(
-                payload, ctypes.c_void_p
-            )
-            ctypes.cast(args[7], ctypes.POINTER(ctypes.c_size_t))[0] = len(payload.value)
-            return 0
-
-        @staticmethod
-        def osagent_kylin_vector_free(_: object) -> None:
-            return None
-
-    engine = object.__new__(KylinVectorEngine)
-    engine.dimension = 2
-    engine._handle = ctypes.c_void_p(1)
-    engine._library = Library()
-    engine._keys = {"fact:alpha"}
-
-    def fail_if_called(_: object) -> dict[int, str]:
-        raise AssertionError("ABI v2 output must not rebuild the numeric key map")
-
-    engine._key_ids = fail_if_called  # type: ignore[method-assign]
-
-    assert engine.search([1.0, 0.0], 1) == [("fact:alpha", 0.875)]

@@ -1,64 +1,11 @@
-# Memory evaluation pipeline
+# 通用记忆质量评估工具
 
-OSagent has one supported evaluation entry point:
+本次比赛的必跑验收入口为：
 
-```powershell
-python benchmarks/memory_eval_pipeline.py
+```bash
+os-agent track1 --scenario examples/track1/maintenance-handover.json --output artifacts/track1
+python -m pytest -q
 ```
 
-The pipeline reads `config/memory_eval_pipeline.json`, pins external source
-revisions and comparison runtimes, runs adapters, normalizes metrics, and writes:
-
-- `doc/evaluation/results/pipeline/manifest.json`
-- `doc/evaluation/explicit-memory-pipeline-report.md`
-
-Adapter scripts under `benchmarks/` are implementation details of this pipeline.
-Do not maintain separate manual result workflows around them.
-
-## Common commands
-
-Run all deterministic default jobs:
-
-```powershell
-python benchmarks/memory_eval_pipeline.py
-```
-
-Run one default job or rebuild reports from existing JSON:
-
-```powershell
-python benchmarks/memory_eval_pipeline.py --job os-agent-competition
-python benchmarks/memory_eval_pipeline.py --offline
-python benchmarks/memory_eval_pipeline.py --no-run
-```
-
-Run optional live-LLM checks explicitly:
-
-```powershell
-python benchmarks/memory_eval_pipeline.py --job native-subagent-e2e
-python benchmarks/memory_eval_pipeline.py --job mem2act-subagent-routing
-```
-
-Optional jobs are disabled during the default run because they require a local
-LLM credential and incur remote API calls. Explicit `--job` selection overrides
-the job's default enabled state.
-
-The default comparison currently includes OSagent, Mem0 OSS 2.0.14, and Oh My
-Pi 17.3.4's Mnemopi FTS backend on the same LoCoMo evidence slice. The pipeline
-installs pinned third-party runtimes under ignored `data/` paths.
-
-## Metric boundaries
-
-- `os-agent-competition` is a deterministic development regression for the four
-  competition-oriented memory metrics.
-- LoCoMo jobs compare evidence retrieval under a shared slice and top-k protocol.
-- The Oh My Pi job evaluates its official Mnemopi backend in FTS fallback mode;
-  it does not claim full coding-agent task accuracy.
-- PERMA support metrics are retrieval diagnostics, not official answer accuracy.
-- `native-subagent-e2e` verifies real process startup, LLM tool routing, durable
-  write, restart persistence, cross-session retrieval, and answer use.
-- `mem2act-subagent-routing` measures planner routing only. It does not claim
-  memory retrieval or answer accuracy.
-
-Every public result must retain its dataset revision, sample range, model/runtime
-configuration, and metric scope. Do not combine metrics from different protocols
-into one leaderboard score.
+`python benchmarks/memory_eval_pipeline.py` 默认只执行同一公开制造运维场景并归档实际结果，不请求模型、不下载外部数据。配置见 config/memory_eval_pipeline.json。
+其余保留脚本是可选的通用质量或外部系统对比工具，需要自行提供合法数据与依赖；没有本轮实测证据时不能作为参赛性能或优势结论。

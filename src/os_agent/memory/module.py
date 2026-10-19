@@ -77,12 +77,10 @@ class AgentMemoryModule:
         self.semantic_index = semantic_index or FactSemanticIndex(
             provider=provider,
             cache=semantic_cache,
-            vector_store_root=self.root,
         )
         self.session_semantic_index = session_semantic_index or SessionSemanticIndex(
             provider=provider,
             cache=semantic_cache,
-            vector_store_root=self.root,
         )
         self.recall_strategy = RecallStrategy(
             self.core,

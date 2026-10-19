@@ -13,7 +13,7 @@ SCENARIO = Path(__file__).resolve().parents[1] / "examples/track1/maintenance-ha
 
 def test_real_lifecycle_reopens_and_physically_deletes(tmp_path):
     # Even a user's enabled remote embedding configuration must not be used.
-    with patch.dict(os.environ, {"OS_AGENT_EMBEDDING_BACKEND": "kylin_system",
+    with patch.dict(os.environ, {"OS_AGENT_EMBEDDING_BACKEND": "openai",
                                  "OS_AGENT_API_KEY": "not-a-real-key"}), \
          patch("urllib.request.urlopen", side_effect=AssertionError("network forbidden")):
         report = run_scenario(SCENARIO, tmp_path)

@@ -34,7 +34,7 @@ DESKTOP_ACTIONS = {
 }
 _KEY_RE = re.compile(r"^[A-Za-z0-9_+\-:.]+$")
 _BUTTONS = {"left": "1", "middle": "2", "right": "3"}
-# Kylin V11 ships ydotool 0.1.x, whose click command uses these button ids.
+# ydotool 0.1.x uses these button ids for desktop click commands.
 _YDOTOOL_BUTTONS = {"left": "1", "middle": "3", "right": "2"}
 _YDOTOOL_KEYS = {
     "ESC": 1,
